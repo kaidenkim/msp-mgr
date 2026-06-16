@@ -1,0 +1,13 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+openpyxl==3.1.5
+google-cloud-bigquery==3.25.0
+google-cloud-resource-manager
+google-cloud-billing
+google-auth
+google-auth-httplib2
+requests
+boto3
+itsdangerous
+python-multipart
+python-dotenv

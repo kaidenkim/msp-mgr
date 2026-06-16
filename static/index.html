@@ -1,0 +1,3278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MSP Manager — 통합 클라우드 관리</title>
+<style>
+:root {
+  --primary: #1a73e8;
+  --primary-dk: #1557b0;
+  --nav: #1a1f36;
+  --bg: #f1f3f4;
+  --surface: #ffffff;
+  --border: #dadce0;
+  --text: #202124;
+  --t2: #5f6368;
+  --t3: #9aa0a6;
+  --green-bg: #e6f4ea; --green: #137333;
+  --red-bg: #fce8e6;   --red: #b31412;
+  --yel-bg: #fef7e0;   --yel: #b06000;
+  --blue-bg: #e8f0fe;  --blue: #1967d2;
+  --orange-bg: #fff3e0; --orange: #e65100;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 13px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* ── Header ── */
+.header {
+  background: var(--nav);
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 50px;
+  flex-shrink: 0;
+  z-index: 200;
+}
+.logo { font-size: 18px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+.logo span { color: #4285f4; }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.btn-login { background: var(--primary); color: #fff; border: none; padding: 5px 13px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.btn-logout { background: rgba(255,255,255,.12); color: rgba(255,255,255,.8); border: none; padding: 5px 13px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.admin-tag { background: rgba(255,255,255,.1); color: rgba(255,255,255,.7); font-size: 11px; padding: 3px 9px; border-radius: 5px; }
+
+/* ── Layout ── */
+.layout { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 216px;
+  flex-shrink: 0;
+  background: #f0f2f5;
+  border-right: 1px solid #dadce0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 8px 0 24px;
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: #c1c7cd; border-radius: 4px; }
+
+.nav-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 12px 14px 6px;
+  color: #3c4043;
+  user-select: none;
+}
+.nav-section-label.gcp-section {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 2px solid #d2e3fc;
+}
+.nav-section-label.aws-section {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 2px solid #fde8d0;
+}
+.nav-section-label .label-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.label-dot-gcp { background: #1a73e8; }
+.label-dot-aws { background: #e8710a; }
+
+.nav-divider { border: none; border-top: 1px solid #dadce0; margin: 8px 6px; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #3c4043;
+  border-left: 3px solid transparent;
+  border-radius: 0 6px 6px 0;
+  margin-right: 8px;
+  transition: all 0.12s;
+  user-select: none;
+}
+.nav-item:hover { background: #e2e6ea; color: #202124; }
+.nav-item.active { color: #202124; background: #dce3f3; font-weight: 600; }
+.nav-item.active.dash     { border-left-color: #6366f1; color: #3d3bdb; }
+.nav-item.active.gcp      { border-left-color: #1a73e8; color: #1557b0; }
+.nav-item.active.aws      { border-left-color: #e8710a; color: #c4540a; }
+.nav-item.active.settings { border-left-color: #80868b; color: #3c4043; }
+/* 섹션별 그룹 */
+.nav-group-gcp { padding-bottom: 6px; }
+.nav-group-aws { padding-bottom: 6px; }
+.nav-group-items {
+  overflow: hidden;
+  transition: max-height 0.22s ease, opacity 0.18s ease;
+  max-height: 300px;
+  opacity: 1;
+}
+.nav-group-items.collapsed {
+  max-height: 0;
+  opacity: 0;
+}
+.nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+
+/* ── Main content ── */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+.main::-webkit-scrollbar { width: 6px; }
+.main::-webkit-scrollbar-thumb { background: #c1c7cd; border-radius: 4px; }
+
+.page-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.page-title-sub { font-size: 12px; color: var(--t2); font-weight: 400; margin-left: 4px; }
+
+.overview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 15px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.card-label { font-size: 11px; color: var(--t2); margin-bottom: 6px; font-weight: 500; }
+.card-value { font-size: 26px; font-weight: 700; color: var(--text); line-height: 1; }
+.card-sub { font-size: 11px; color: var(--t3); margin-top: 6px; }
+.card-gcp { border-top: 2px solid #4285f4; }
+.card-aws { border-top: 2px solid #f97316; }
+.card-warn { border-top: 2px solid #f59e0b; }
+.card-ok { border-top: 2px solid #34a853; }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+.table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.table-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; background: var(--surface); }
+.table-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.table-badge { font-size: 10px; padding: 2px 8px; border-radius: 8px; margin-left: 6px; }
+.badge-blue { background: var(--blue-bg); color: var(--blue); }
+.badge-orange { background: var(--orange-bg); color: var(--orange); }
+.badge-green { background: var(--green-bg); color: var(--green); }
+.badge-red { background: var(--red-bg); color: var(--red); }
+.badge-gray { background: #f1f3f4; color: var(--t2); }
+.badge { display:inline-block; font-size:11px; padding:2px 8px; border-radius:10px; font-weight:500; white-space:nowrap; }
+.settings-label { font-size:11px; color:var(--t2); margin-bottom:4px; font-weight:500; }
+.btn-sm.active-month-tab { background: #e8710a; color: #fff; font-weight: 600; }
+
+/* ── 인증 가이드 박스 ── */
+.guide-box { background:#f8f9fa; border:1px solid #e8eaed; border-radius:8px; padding:14px 16px; }
+.guide-title { font-size:12px; font-weight:700; color:#202124; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.guide-steps { font-size:12px; color:#3c4043; padding-left:18px; line-height:1.9; }
+.guide-steps b { color:#202124; }
+.guide-sub { margin-top:2px; padding-left:16px; }
+.guide-sub li { list-style:disc; }
+.guide-cmd { display:inline-block; font-family:monospace; font-size:12px; background:#e8eaed; color:#1a73e8; padding:3px 10px; border-radius:4px; margin-top:3px; }
+.guide-warn { margin-top:10px; font-size:11px; color:#e37400; background:#fef7e0; border-radius:4px; padding:5px 10px; }
+.guide-badge { font-size:10px; padding:2px 7px; border-radius:8px; font-weight:600; }
+.guide-badge-green  { background:#e6f4ea; color:#137333; }
+.guide-badge-yellow { background:#fef7e0; color:#b06000; }
+.badge-abandon1 { background:#fff3e0; color:#e65100; }
+.badge-abandon2 { background:#fce4e4; color:#c62828; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 7px 14px; font-size: 10px; font-weight: 600; color: var(--t2); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); background: #f8f9fa; }
+td { padding: 8px 14px; border-bottom: 1px solid #f1f3f4; font-size: 12px; color: var(--text); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #fafbfd; }
+
+.dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; }
+.dot-green { background: #34a853; } .dot-red { background: #ea4335; }
+.dot-yellow { background: #fbbc04; } .dot-gray { background: #9aa0a6; }
+.tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 500; }
+.tag-billing { background: var(--red-bg); color: var(--red); }
+.tag-deletable { background: var(--green-bg); color: var(--green); }
+.tag-check { background: var(--yel-bg); color: var(--yel); }
+.tag-disabled { background: #f1f3f4; color: var(--t2); }
+.tag-infra { background: var(--blue-bg); color: var(--blue); }
+.tag-gcp-project { background: #e6f4ea; color: #1e8e3e; font-family: monospace; }
+.tag-dkt { background: var(--yel-bg); color: var(--yel); }
+.tag-root { background: #f1f3f4; color: var(--t2); }
+
+.btn-sm { background: #f1f3f4; border: 1px solid var(--border); color: var(--t2); padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; }
+.btn-sm:hover { background: #e8eaed; color: var(--text); }
+.btn-danger { background: var(--red-bg); color: var(--red); border-color: #f5c6c6; }
+.btn-danger:hover { background: #f8d0ce; }
+.btn-scan { border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; color: #fff; }
+.btn-scan-gcp { background: var(--primary); }
+.btn-scan-gcp:hover { background: var(--primary-dk); }
+.btn-scan-aws { background: #e65100; }
+.btn-scan-aws:hover { background: #bf360c; }
+
+.scan-bar { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.scan-status { font-size: 12px; color: var(--t2); }
+
+.filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.filter-select { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 5px 10px; border-radius: 6px; font-size: 12px; }
+.filter-input { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 5px 10px; border-radius: 6px; font-size: 12px; width: 200px; }
+.filter-input::placeholder { color: var(--t3); }
+
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.stats-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.stat-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; flex: 1; min-width: 90px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+.stat-num { font-size: 20px; font-weight: 700; color: var(--text); }
+.stat-label { font-size: 10px; color: var(--t2); margin-top: 2px; }
+
+.section-title { font-size: 11px; font-weight: 600; color: var(--t2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; margin-top: 4px; }
+
+.alert { background: var(--yel-bg); border: 1px solid #f9ab00; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--yel); margin-bottom: 14px; }
+.alert-red { background: var(--red-bg); border: 1px solid #f5c6c6; color: var(--red); }
+.alert-green { background: var(--green-bg); border: 1px solid #a8d5b5; color: var(--green); }
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.table-scroll { overflow-x: auto; }
+
+.res-num { display: inline-block; min-width: 22px; text-align: center; padding: 1px 4px; border-radius: 3px; font-weight: 600; font-size: 11px; }
+.res-0 { color: var(--t3); } .res-low { color: var(--blue); background: #e8f0fe99; }
+.res-mid { color: var(--yel); background: #fef7e099; } .res-high { color: var(--red); background: #fce8e699; }
+
+.cost-bar-wrap { display: flex; align-items: center; gap: 8px; }
+.cost-bar-bg { flex: 1; background: #e8eaed; border-radius: 3px; height: 5px; max-width: 80px; }
+.cost-bar-fill { height: 5px; border-radius: 3px; background: #f97316; }
+
+.gcmdb-tab.active-gcmdb { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.tree-node { padding: 2px 0 2px 18px; border-left: 1px solid var(--border); margin-left: 12px; }
+.tree-root { padding: 0; border-left: none; margin-left: 0; }
+.tree-item { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+.tree-item:hover { background: #f1f3f4; }
+.tree-name { font-size: 12px; color: var(--text); }
+.tree-count { font-size: 10px; color: var(--t3); margin-left: auto; }
+.tree-account { color: var(--t2) !important; font-size: 11px !important; }
+
+.progress-bar-wrap { flex: 1; display: flex; align-items: center; gap: 10px; }
+.progress-bar-bg { flex: 1; background: #e8eaed; border-radius: 4px; height: 6px; }
+.progress-bar-fill { height: 6px; border-radius: 4px; background: var(--primary); transition: width 0.3s; }
+.progress-text { font-size: 11px; color: var(--t2); min-width: 120px; }
+
+.loading { color: var(--t2); font-size: 12px; padding: 32px; text-align: center; }
+
+/* ── GCP Summary Cards ── */
+.gcp-cards { display: flex; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+.gcp-card {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  border-left: 5px solid;
+  cursor: pointer;
+  transition: box-shadow .15s, transform .1s;
+  flex: 1;
+  min-width: 150px;
+}
+.gcp-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.15); transform: translateY(-1px); }
+.gcp-card.active-filter { outline: 2px solid var(--primary); }
+.gcp-card-num { font-size: 32px; font-weight: 700; line-height: 1.1; }
+.gcp-card-label { font-size: 12px; color: var(--t2); margin-top: 4px; }
+.gcp-card-total    { border-color: #1a73e8; } .gcp-card-total .gcp-card-num    { color: #1a73e8; }
+.gcp-card-ok       { border-color: #34a853; } .gcp-card-ok .gcp-card-num       { color: #34a853; }
+.gcp-card-billing  { border-color: #ea4335; } .gcp-card-billing .gcp-card-num  { color: #ea4335; }
+.gcp-card-owner    { border-color: #fbbc04; } .gcp-card-owner .gcp-card-num    { color: #e37400; }
+.gcp-card-abandoned{ border-color: #ff6d00; } .gcp-card-abandoned .gcp-card-num{ color: #e65100; }
+
+/* AWS CMDB tab panel area */
+#gcp-cmdb-tabs { display:flex; gap:3px; background: #f1f3f4; border: 1px solid var(--border); border-radius: 7px; padding: 3px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">MSP <span>Manager</span></div>
+  <div class="header-right" id="header-right">
+    <!-- Populated by JS -->
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ════════════════ SIDEBAR ════════════════ -->
+  <nav class="sidebar">
+    <div class="nav-item dash active" id="nav-dash" onclick="switchTab('dashboard')">
+      <span class="nav-icon">🏠</span> 대시보드
+    </div>
+    <div class="nav-group-gcp">
+      <div class="nav-section-label gcp-section" onclick="toggleNavGroup('gcp')" style="cursor:pointer">
+        <span class="label-dot label-dot-gcp"></span> GCP
+        <span class="nav-collapse-icon" id="nav-collapse-gcp" style="margin-left:auto;font-size:16px;color:#80868b">▾</span>
+      </div>
+      <div id="nav-group-gcp-items" class="nav-group-items">
+        <div class="nav-item gcp" id="nav-gcp-projects" onclick="switchTab('gcp-projects')">
+          <span class="nav-icon">📋</span> 프로젝트
+        </div>
+        <div class="nav-item gcp" id="nav-gcp-resources" onclick="switchTab('gcp-resources')">
+          <span class="nav-icon">🗂</span> 리소스
+        </div>
+        <div class="nav-item gcp" id="nav-gcp-billing" onclick="switchTab('gcp-billing')">
+          <span class="nav-icon">💳</span> 빌링 계정 관리
+        </div>
+      </div>
+    </div>
+    <div class="nav-group-aws">
+      <div class="nav-section-label aws-section" onclick="toggleNavGroup('aws')" style="cursor:pointer">
+        <span class="label-dot label-dot-aws"></span> AWS
+        <span class="nav-collapse-icon" id="nav-collapse-aws" style="margin-left:auto;font-size:16px;color:#80868b">▾</span>
+      </div>
+      <div id="nav-group-aws-items" class="nav-group-items">
+        <div class="nav-item aws" id="nav-aws-accounts" onclick="switchTab('aws-accounts')">
+          <span class="nav-icon">🏢</span> 계정
+        </div>
+        <div class="nav-item aws" id="nav-aws-cmdb" onclick="switchTab('aws-cmdb')">
+          <span class="nav-icon">🖥</span> 리소스
+        </div>
+        <div class="nav-item aws" id="nav-aws-costs" onclick="switchTab('aws-costs')" style="display:none">
+          <span class="nav-icon">💰</span> 빌링 현황
+        </div>
+        <div class="nav-item aws" id="nav-aws-org" onclick="switchTab('aws-org')" style="display:none">
+          <span class="nav-icon">🌐</span> 조직 관리
+        </div>
+      </div>
+    </div>
+    <hr class="nav-divider" id="nav-divider-settings" style="display:none">
+    <div class="nav-item settings" id="nav-settings" onclick="switchTab('settings')" style="display:none">
+      <span class="nav-icon">⚙</span> 설정
+    </div>
+  </nav>
+
+  <!-- ════════════════ MAIN ════════════════ -->
+  <div class="main">
+
+    <!-- ────────── 대시보드 ────────── -->
+    <div id="tab-dashboard" class="tab-content active">
+      <div class="page-title">🏠 대시보드 <span class="page-title-sub">통합 클라우드 현황</span></div>
+      <div class="overview-grid">
+        <div class="card card-gcp">
+          <div class="card-label">GCP 전체 프로젝트</div>
+          <div class="card-value" id="dash-gcp-total">-</div>
+          <div class="card-sub" id="dash-gcp-sub">로딩 중...</div>
+        </div>
+        <div class="card card-warn">
+          <div class="card-label">GCP 즉시 삭제 가능</div>
+          <div class="card-value" id="dash-gcp-deletable">-</div>
+          <div class="card-sub" id="dash-gcp-deletable-sub">-</div>
+        </div>
+        <div class="card card-aws">
+          <div class="card-label">AWS 멤버 계정</div>
+          <div class="card-value" id="dash-aws-total">-</div>
+          <div class="card-sub" id="dash-aws-sub">로딩 중...</div>
+        </div>
+        <div class="card card-ok">
+          <div class="card-label">GCP 총 리소스</div>
+          <div class="card-value" id="dash-gcp-resources">-</div>
+          <div class="card-sub" id="dash-gcp-resources-sub">-</div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="table-card">
+          <div class="table-header">
+            <div><span class="table-title">GCP 최근 스캔</span><span class="table-badge badge-blue" id="dash-gcp-scan-time">-</span></div>
+            <button class="btn-scan btn-scan-gcp" onclick="switchTab('gcp-projects')">📋 프로젝트 보기</button>
+          </div>
+          <table id="dash-gcp-table">
+            <tr><th>구분</th><th class="num">건수</th><th>상태</th></tr>
+            <tr><td colspan="3" class="loading">로딩 중...</td></tr>
+          </table>
+        </div>
+        <div class="table-card">
+          <div class="table-header">
+            <div><span class="table-title">AWS 이번달 비용 Top 5</span><span class="table-badge badge-orange" id="dash-aws-month">-</span></div>
+            <button class="btn-scan btn-scan-aws" onclick="switchTab('aws-costs')" id="dash-aws-costs-btn" style="display:none">💰 상세 보기</button>
+          </div>
+          <table id="dash-aws-cost-table">
+            <tr><th>계정</th><th class="num">USD</th><th>비율</th></tr>
+            <tr><td colspan="3" class="loading">로딩 중...</td></tr>
+          </table>
+        </div>
+      </div>
+      <div class="section-title">AWS 리소스 요약 (CMDB)</div>
+      <div class="stats-row" id="dash-aws-cmdb-stats">
+        <div class="stat-item"><div class="stat-num" id="dash-ec2">-</div><div class="stat-label">🖥 EC2</div></div>
+        <div class="stat-item"><div class="stat-num" id="dash-s3">-</div><div class="stat-label">🗄 S3</div></div>
+        <div class="stat-item"><div class="stat-num" id="dash-rds">-</div><div class="stat-label">🗃 RDS</div></div>
+        <div class="stat-item"><div class="stat-num" id="dash-ecs">-</div><div class="stat-label">📦 ECS</div></div>
+        <div class="stat-item"><div class="stat-num" id="dash-eks">-</div><div class="stat-label">⎈ EKS</div></div>
+        <div class="stat-item"><div class="stat-num" id="dash-subnet">-</div><div class="stat-label">🌐 Subnet</div></div>
+      </div>
+    </div>
+
+    <!-- ────────── GCP 프로젝트 ────────── -->
+    <div id="tab-gcp-projects" class="tab-content">
+      <div class="page-title">📋 GCP 프로젝트 <span class="page-title-sub" id="gcp-proj-subtitle">-</span></div>
+      <div class="scan-bar">
+        <span class="scan-status" id="gcp-scan-status">로딩 중...</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="gcp-proj-date-sel" class="filter-select" style="font-size:11px" onchange="loadGcpProjectsByDate(this.value)">
+            <option value="">최신 데이터</option>
+          </select>
+          <button class="btn-scan btn-scan-gcp" id="gcp-scan-btn" onclick="startGcpScan()">🔄 전체 스캔</button>
+          <button class="btn-sm" onclick="downloadGcpExcel()">📥 Excel 다운로드</button>
+        </div>
+      </div>
+      <div id="gcp-scan-progress" style="display:none" class="scan-bar">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="gcp-progress-bar" style="width:0%"></div></div>
+          <span class="progress-text" id="gcp-progress-text">준비 중...</span>
+        </div>
+      </div>
+
+      <!-- GCP Summary Cards -->
+      <div class="gcp-cards" id="gcpSummaryCards">
+        <div class="gcp-card gcp-card-total" id="gcpCardTotal" onclick="gcpFilterCard('')">
+          <div class="gcp-card-num" id="gcpCntTotal">—</div>
+          <div class="gcp-card-label">전체 프로젝트</div>
+        </div>
+        <div class="gcp-card gcp-card-ok" id="gcpCardOk" onclick="gcpFilterCard('즉시 삭제 가능')">
+          <div class="gcp-card-num" id="gcpCntOk">—</div>
+          <div class="gcp-card-label">즉시 삭제 가능</div>
+        </div>
+        <div class="gcp-card gcp-card-billing" id="gcpCardBilling" onclick="gcpFilterCard('빌링연결')">
+          <div class="gcp-card-num" id="gcpCntBilling">—</div>
+          <div class="gcp-card-label">빌링연결</div>
+        </div>
+        <div class="gcp-card gcp-card-owner" id="gcpCardOwner" onclick="gcpFilterCard('소유자 확인 필요')">
+          <div class="gcp-card-num" id="gcpCntOwner">—</div>
+          <div class="gcp-card-label">소유자 확인 필요</div>
+        </div>
+        <div class="gcp-card gcp-card-abandoned" id="gcpCardAbandoned" onclick="gcpFilterAbandoned()">
+          <div class="gcp-card-num" id="gcpCntAbandoned">—</div>
+          <div class="gcp-card-label">방치 의심 프로젝트</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <select class="filter-select" id="gcp-filter-billing" onchange="renderGcpProjects()">
+          <option value="">빌링 전체</option>
+          <option value="open">연결됨 (OPEN)</option>
+          <option value="closed">연결됨 (CLOSED)</option>
+          <option value="none">미연결</option>
+        </select>
+        <select class="filter-select" id="gcp-filter-deletable" onchange="renderGcpProjects()">
+          <option value="">삭제 여부 전체</option>
+          <option value="빌링연결">빌링연결</option>
+          <option value="즉시 삭제 가능">즉시 삭제 가능</option>
+          <option value="소유자 확인 필요">소유자 확인 필요</option>
+        </select>
+        <select class="filter-select" id="gcp-filter-owner" onchange="renderGcpProjects()" style="display:none">
+          <option value="">소유자 전체</option>
+          <option value="yes">있음</option>
+          <option value="no">없음</option>
+        </select>
+        <select class="filter-select" id="gcp-filter-abandoned" onchange="renderGcpProjects()">
+          <option value="">방치 여부 전체</option>
+          <option value="1">방치 의심 이상</option>
+          <option value="2">방치 가능성 높음</option>
+        </select>
+        <input class="filter-input" id="gcp-filter-search" placeholder="🔍 프로젝트 ID 검색..." oninput="renderGcpProjects()">
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <div><span class="table-title">프로젝트 목록</span><span class="table-badge badge-blue" id="gcp-count-badge">-</span><span class="table-badge badge-red" id="gcp-deletable-badge"></span></div>
+          <div id="gcp-delete-toolbar" style="display:none;align-items:center;gap:8px">
+            <span id="gcp-check-count" style="font-size:12px;color:var(--t2)">0개 선택</span>
+            <button class="btn-sm btn-danger" onclick="deleteSelectedGcpProjects()" id="gcp-delete-selected-btn" disabled>🗑 선택 삭제</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <tr id="gcp-projects-thead"><th style="width:28px"><input type="checkbox" id="gcp-check-all" onclick="toggleAllGcpChecks(this)" style="display:none"></th><th>프로젝트 ID</th><th>이름</th><th>생성일</th><th>빌링 상태</th><th>빌링 계정</th><th>소유자</th><th>삭제 여부</th><th>방치 여부</th></tr>
+            <tbody id="gcp-projects-tbody"><tr><td colspan="8" class="loading">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── GCP 리소스 CMDB ────────── -->
+    <div id="tab-gcp-resources" class="tab-content">
+      <div class="page-title">🗂 GCP 리소스 CMDB <span class="page-title-sub" id="gcp-res-subtitle">-</span></div>
+      <div class="scan-bar">
+        <span class="scan-status" id="gcp-res-scan-status">로딩 중...</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="gcp-res-date-sel" class="filter-select" style="font-size:11px" onchange="loadGcpResourcesByDate(this.value)">
+            <option value="">최신 데이터</option>
+          </select>
+          <button class="btn-scan btn-scan-gcp" id="gcp-res-scan-btn" onclick="startGcpResourceScan()">🔄 리소스 재스캔</button>
+        </div>
+      </div>
+      <div id="gcp-res-progress" style="display:none" class="scan-bar">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="gcp-res-progress-bar" style="width:0%"></div></div>
+          <span class="progress-text" id="gcp-res-progress-text">준비 중...</span>
+        </div>
+      </div>
+      <!-- 요약 stat -->
+      <div class="stats-row" id="gcp-res-stats">
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('vm')"><div class="stat-num" id="gcp-res-vm">0</div><div class="stat-label">🖥 VM</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('run')"><div class="stat-num" id="gcp-res-run">0</div><div class="stat-label">☁ Cloud Run</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('fn')"><div class="stat-num" id="gcp-res-fn">0</div><div class="stat-label">⚡ Functions</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('gke')"><div class="stat-num" id="gcp-res-gke">0</div><div class="stat-label">⎈ GKE</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('storage')"><div class="stat-num" id="gcp-res-storage">0</div><div class="stat-label">🗄 Storage</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('sql')"><div class="stat-num" id="gcp-res-sql">0</div><div class="stat-label">🗃 SQL</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('pubsub')"><div class="stat-num" id="gcp-res-pubsub">0</div><div class="stat-label">📨 PubSub</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('vpc')"><div class="stat-num" id="gcp-res-vpc">0</div><div class="stat-label">🌐 VPC</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('sa')"><div class="stat-num" id="gcp-res-sa">0</div><div class="stat-label">👤 SA</div></div>
+      </div>
+      <!-- CMDB 캐시 빌드 상태 바 -->
+      <div id="gcp-cmdb-cache-bar" style="display:none;background:#e8f0fe;border:1px solid #4285f4;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#1a73e8">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="gcp-cmdb-cache-stage">캐시 빌드 중...</span>
+          <div style="flex:1;height:6px;background:#c5d8fb;border-radius:3px;overflow:hidden">
+            <div id="gcp-cmdb-cache-prog" style="height:100%;background:#1a73e8;border-radius:3px;width:0%;transition:width 0.3s"></div>
+          </div>
+          <span id="gcp-cmdb-cache-pct" style="min-width:32px;text-align:right">0%</span>
+        </div>
+      </div>
+      <!-- 타입 탭 + 필터 -->
+      <div class="filter-bar">
+        <div style="display:flex;gap:3px;background:#f1f3f4;border:1px solid var(--border);border-radius:7px;padding:3px">
+          <button class="btn-sm gcmdb-tab active-gcmdb" data-gtype="vm"      onclick="switchGcpCmdb('vm')">🖥 VM</button>
+          <button class="btn-sm gcmdb-tab" data-gtype="run"     onclick="switchGcpCmdb('run')">☁ Run</button>
+          <button class="btn-sm gcmdb-tab" data-gtype="fn"      onclick="switchGcpCmdb('fn')">⚡ Functions</button>
+          <button class="btn-sm gcmdb-tab" data-gtype="gke"     onclick="switchGcpCmdb('gke')">⎈ GKE</button>
+          <button class="btn-sm gcmdb-tab" data-gtype="storage" onclick="switchGcpCmdb('storage')">🗄 Storage</button>
+          <button class="btn-sm gcmdb-tab" data-gtype="sql"     onclick="switchGcpCmdb('sql')">🗃 SQL</button>
+          <button class="btn-sm gcmdb-tab" data-gtype="pubsub"  onclick="switchGcpCmdb('pubsub')">📨 PubSub</button>
+          <button class="btn-sm gcmdb-tab" data-gtype="vpc"     onclick="switchGcpCmdb('vpc')">🌐 VPC</button>
+          <button class="btn-sm gcmdb-tab" data-gtype="lb"      onclick="switchGcpCmdb('lb')">⚖ LB</button>
+          <button class="btn-sm gcmdb-tab" data-gtype="sa"      onclick="switchGcpCmdb('sa')">👤 SA</button>
+          <button class="btn-sm gcmdb-tab" data-gtype="sink"    onclick="switchGcpCmdb('sink')">📋 LogSink</button>
+        </div>
+        <input class="filter-input" id="gcp-res-search" placeholder="🔍 이름 검색..." oninput="renderGcpCmdbFlat()">
+        <button class="btn-sm" id="gcp-cmdb-cache-btn" onclick="buildGcpCmdbCache()" style="white-space:nowrap">🗄 캐시 빌드</button>
+      </div>
+      <!-- 플랫 테이블 (AWS CMDB와 동일 구조) -->
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-title" id="gcp-cmdb-table-title">VM 인스턴스</span>
+          <span class="table-badge badge-blue" id="gcp-cmdb-count">-</span>
+          <span id="gcp-cmdb-load-status" style="font-size:11px;color:var(--t2);margin-left:8px"></span>
+          <span id="gcp-cmdb-cache-info" style="font-size:11px;color:var(--t2);margin-left:auto"></span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead id="gcp-cmdb-thead"></thead>
+            <tbody id="gcp-cmdb-tbody"><tr><td colspan="6" class="loading">타입을 선택하면 상세 목록이 로드됩니다</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <!-- 기존 호환용 (숨김) -->
+      <div id="gcp-cmdb-table-area" style="display:none"></div>
+    </div>
+
+    <!-- ────────── GCP 빌링 ────────── -->
+    <div id="tab-gcp-billing" class="tab-content">
+      <div class="page-title">💳 GCP 빌링 <span class="page-title-sub">빌링 계정 현황 및 비용</span></div>
+      <!-- 스캔바 -->
+      <div class="scan-bar">
+        <span class="scan-status" id="gcp-billing-status-text">로딩 중...</span>
+        <button class="btn-scan btn-scan-gcp" onclick="startBillingScan()">🔍 비용 스캔 (최근 90일)</button>
+      </div>
+      <!-- BigQuery 미설정 모드 안내 -->
+      <div id="gcp-billing-no-config" style="display:none;background:#e8f4fd;border:1px solid #90caf9;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;color:#1565c0">
+        ℹ️ BigQuery 미설정 상태입니다. 스캔 시 <b>빌링 계정 단위 비용</b>(인보이스·Recommender API)으로 조회됩니다. 프로젝트별 세부 비용은 우측 설정 카드에서 BigQuery를 설정하면 확인할 수 있습니다.
+      </div>
+      <!-- 진행 바 -->
+      <div id="gcp-billing-scan-progress" style="display:none" class="scan-bar">
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="gcp-billing-progress-bar" style="width:0%"></div></div>
+          <span class="progress-text" id="gcp-billing-progress-text">준비 중...</span>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">빌링 계정 현황</span><span class="table-badge badge-blue" id="billing-account-count">-</span></div>
+          <table>
+            <tr><th>빌링 계정 ID</th><th>이름</th><th>상태</th><th class="num">프로젝트</th><th class="num">최근 비용</th></tr>
+            <tbody id="billing-accounts-tbody"><tr><td colspan="5" class="loading">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">BigQuery 비용 설정</span></div>
+          <div style="padding:16px">
+            <div style="margin-bottom:10px">
+              <div style="font-size:11px;color:var(--t2);margin-bottom:4px">BigQuery 프로젝트 ID</div>
+              <input class="filter-input" style="width:100%" id="bq-project-input" placeholder="예: my-billing-project">
+            </div>
+            <div style="margin-bottom:14px">
+              <div style="font-size:11px;color:var(--t2);margin-bottom:4px">BigQuery 데이터셋</div>
+              <input class="filter-input" style="width:100%" id="bq-dataset-input" placeholder="예: gcp_billing_export">
+            </div>
+            <button class="btn-scan btn-scan-gcp" style="width:100%;margin-bottom:8px" onclick="saveBillingSettings()">💾 설정 저장</button>
+            <button class="btn-sm" style="width:100%;padding:8px" onclick="startBillingScan()">🔍 비용 스캔 (최근 90일)</button>
+            <div id="billing-settings-msg" style="margin-top:8px;font-size:11px;color:var(--t2)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── AWS 계정 ────────── -->
+    <div id="tab-aws-accounts" class="tab-content">
+      <div class="page-title">🏢 AWS 계정 <span class="page-title-sub" id="aws-acc-subtitle">-</span></div>
+      <div class="scan-bar">
+        <span class="scan-status" id="aws-acc-status">로딩 중...</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="aws-acc-cache-tag" style="font-size:11px;color:var(--t3)"></span>
+          <button class="btn-sm" onclick="loadAwsAccounts(false)" id="aws-acc-refresh-btn">📋 캐시</button>
+          <button class="btn-scan btn-scan-aws" onclick="loadAwsAccounts(true)">🔄 새로 수집</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header"><span class="table-title">멤버 계정 목록</span><span class="table-badge badge-orange" id="aws-acc-count">-</span></div>
+        <table>
+          <tr><th>계정 ID</th><th>계정명</th><th>이메일</th><th>상태</th><th class="num">이번달 비용</th><th>액션</th></tr>
+          <tbody id="aws-accounts-tbody"><tr><td colspan="6" class="loading">로딩 중...</td></tr></tbody>
+        </table>
+      </div>
+      <div id="aws-account-resources" style="display:none">
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title" id="aws-res-title">리소스</span>
+            <button class="btn-sm" onclick="document.getElementById('aws-account-resources').style.display='none'">✕ 닫기</button>
+          </div>
+          <div id="aws-res-content" class="loading">로딩 중...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── AWS CMDB ────────── -->
+    <div id="tab-aws-cmdb" class="tab-content">
+      <div class="page-title">🖥 AWS CMDB <span class="page-title-sub" id="aws-cmdb-subtitle">-</span></div>
+      <div class="scan-bar">
+        <span class="scan-status" id="aws-cmdb-status-text">로딩 중...</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="aws-cmdb-date-sel" class="filter-select" style="font-size:11px" onchange="loadAwsCmdbByDate(this.value)">
+            <option value="">최신 데이터</option>
+          </select>
+          <button class="btn-sm" onclick="refreshAwsCmdb()">🔄 캐시 갱신</button>
+          <button class="btn-scan btn-scan-aws" id="aws-cmdb-collect-btn" onclick="collectAwsCmdb()">▶ 수집 실행</button>
+        </div>
+      </div>
+      <div id="aws-cmdb-collect-status" style="display:none" class="scan-bar">
+        <span class="scan-status" id="aws-cmdb-collect-text">수집 중...</span>
+      </div>
+      <div class="filter-bar">
+        <div style="display:flex;gap:3px;background:#f1f3f4;border:1px solid var(--border);border-radius:7px;padding:3px">
+          <button class="btn-sm aws-cmdb-type-btn active-gcmdb" data-type="EC2" onclick="switchAwsCmdbType('EC2')">EC2</button>
+          <button class="btn-sm aws-cmdb-type-btn" data-type="S3" onclick="switchAwsCmdbType('S3')">S3</button>
+          <button class="btn-sm aws-cmdb-type-btn" data-type="RDS" onclick="switchAwsCmdbType('RDS')">RDS</button>
+          <button class="btn-sm aws-cmdb-type-btn" data-type="ECS" onclick="switchAwsCmdbType('ECS')">ECS</button>
+          <button class="btn-sm aws-cmdb-type-btn" data-type="EKS" onclick="switchAwsCmdbType('EKS')">EKS</button>
+          <button class="btn-sm aws-cmdb-type-btn" data-type="SUBNET" onclick="switchAwsCmdbType('SUBNET')">Subnet</button>
+          <button class="btn-sm aws-cmdb-type-btn" data-type="VPC" onclick="switchAwsCmdbType('VPC')">🌐 VPC</button>
+        </div>
+        <input class="filter-input" id="aws-cmdb-search" placeholder="🔍 이름 / ID 검색..." oninput="renderAwsCmdbTable()">
+        <button class="btn-sm" id="aws-vpc-cache-btn" onclick="buildAwsVpcCache()" style="display:none;white-space:nowrap">🔄 VPC 수집</button>
+      </div>
+      <!-- VPC 캐시 빌드 진행 바 -->
+      <div id="aws-vpc-build-bar" style="display:none;background:#fef3cd;border:1px solid #f4b942;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#6c4e00">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="aws-vpc-build-stage">VPC 수집 중...</span>
+          <div style="flex:1;height:6px;background:#fde3a7;border-radius:3px;overflow:hidden">
+            <div id="aws-vpc-build-prog" style="height:100%;background:#f4b942;border-radius:3px;width:0%;transition:width 0.3s"></div>
+          </div>
+          <span id="aws-vpc-build-pct" style="min-width:32px;text-align:right">0%</span>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-title" id="aws-cmdb-table-title">EC2 인스턴스</span>
+          <span class="table-badge badge-orange" id="aws-cmdb-count">-</span>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead id="aws-cmdb-thead"></thead>
+            <tbody id="aws-cmdb-tbody"><tr><td colspan="8" class="loading">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── AWS 비용 ────────── -->
+    <div id="tab-aws-costs" class="tab-content">
+      <div class="page-title">💰 AWS 빌링 현황 <span class="page-title-sub">Cost Explorer · SP 수수료 필터 적용</span></div>
+
+      <!-- 필터 바 -->
+      <div class="scan-bar" style="margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:12px;color:var(--t2);font-weight:500">📅 조회 월:</span>
+          <div id="aws-cost-month-tabs" style="display:flex;gap:3px;background:#f1f3f4;border-radius:8px;padding:3px"></div>
+          <select class="filter-select" id="aws-cost-account-filter" onchange="loadAwsCostDetail()">
+            <option value="">전체 계정</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="aws-cost-cache-tag" style="font-size:11px;color:var(--t3)"></span>
+          <button class="btn-scan btn-scan-aws" onclick="loadAwsCosts(true)">🔄 새로 수집</button>
+        </div>
+      </div>
+
+      <!-- 요약 테이블 + 서비스별 상세 -->
+      <div class="two-col">
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title">계정별 비용</span>
+            <span class="table-badge badge-orange" id="aws-cost-total-badge">-</span>
+          </div>
+          <table>
+            <tr><th>계정명</th><th class="num">비용 (USD)</th><th class="num">SP 수수료</th><th>비율</th></tr>
+            <tbody id="aws-cost-summary-tbody"><tr><td colspan="4" class="loading">로딩 중...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title" id="aws-cost-detail-title">서비스별 비용</span>
+            <span class="table-badge badge-orange" id="aws-cost-detail-month">-</span>
+          </div>
+          <table>
+            <tr><th>서비스</th><th class="num">비용 (USD)</th></tr>
+            <tbody id="aws-cost-detail-tbody">
+              <tr><td colspan="2" style="color:var(--t2);padding:32px;text-align:center">계정을 선택하세요</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 월별 트렌드 (전체 계정 합산) -->
+      <div class="table-card" id="aws-cost-trend-card" style="display:none">
+        <div class="table-header">
+          <span class="table-title">📈 월별 비용 트렌드 (전체 합산)</span>
+        </div>
+        <div style="padding:16px;overflow-x:auto">
+          <table style="min-width:600px">
+            <thead><tr id="aws-trend-head"></tr></thead>
+            <tbody id="aws-trend-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── AWS 조직 ────────── -->
+    <div id="tab-aws-org" class="tab-content">
+      <div class="page-title">🌐 AWS 조직 관리 <span class="page-title-sub">OU 트리</span></div>
+      <div class="scan-bar" style="margin-bottom:14px">
+        <span class="scan-status">Organizations 구조</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="aws-org-cache-tag" style="font-size:11px;color:var(--t3)"></span>
+          <button class="btn-sm" onclick="loadAwsOrg(false)">📋 캐시</button>
+          <button class="btn-scan btn-scan-aws" onclick="loadAwsOrg(true)">🔄 새로 수집</button>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">OU 트리</span><span class="table-badge badge-orange" id="aws-org-count">-</span></div>
+          <div style="padding:12px" id="aws-org-tree-area">
+            <div class="loading">로딩 중...</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div class="table-card">
+            <div class="table-header"><span class="table-title">계정 이동</span><span class="table-badge badge-gray">Admin 전용</span></div>
+            <div style="padding:16px" id="aws-org-move-area">
+              <!-- Populated by JS based on role -->
+            </div>
+          </div>
+          <!-- 자동 복귀 예약 현황 -->
+          <div class="table-card" id="org-schedule-card" style="display:none">
+            <div class="table-header">
+              <span class="table-title">📅 자동 복귀 예약 현황</span>
+              <span class="table-badge badge-orange" id="org-schedule-count">0건</span>
+            </div>
+            <div style="padding:0 16px 16px" id="org-scheduled-panel"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── 설정 ────────── -->
+    <div id="tab-settings" class="tab-content">
+      <div class="page-title">⚙ 설정</div>
+      <div id="settings-content">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+// ── 전역 상태 ────────────────────────────────────────────────────────
+const USER_ROLE = "{{ role }}";
+let GCP_PROJECTS = [], GCP_RESOURCES = [], GCP_BILLING_COSTS = {};
+let AWS_ACCOUNTS = [], AWS_CMDB_DATA = [], AWS_COSTS = {};
+let _gcpCmdbType = 'vm';
+let _awsCmdbType = 'EC2';
+let _awsAccFilter = '';  // 계정 컬럼 헤더 드롭다운 선택값
+let _awsCostSelectedAccount = '';
+let _gcpActiveFilter = '';
+
+// ── 헤더 렌더링 ──────────────────────────────────────────────────────
+(function initHeader() {
+  const el = document.getElementById('header-right');
+  if (USER_ROLE === 'admin') {
+    el.innerHTML = '<span class="admin-tag">🔑 Admin</span><a href="/logout"><button class="btn-logout">로그아웃</button></a>';
+    // Admin일 때만 표시
+    document.getElementById('nav-settings').style.display = 'flex';
+    document.getElementById('nav-divider-settings').style.display = 'block';
+    document.getElementById('nav-aws-costs').style.display = 'flex';
+    document.getElementById('nav-aws-org').style.display = 'flex';
+    document.getElementById('dash-aws-costs-btn').style.display = '';
+  } else {
+    el.innerHTML = '<span class="admin-tag">👁 Viewer 모드</span><a href="/login"><button class="btn-login">관리자 로그인</button></a>';
+  }
+})();
+
+// ── 유틸 ─────────────────────────────────────────────────────────────
+function billingStatus(p) {
+  if (p.billing_enabled === 'True') {
+    if (p.billing_open === 'True')  return '연결됨 🟢 OPEN';
+    if (p.billing_open === 'False') return '연결됨 🔴 CLOSED';
+    return '연결됨 ⚪ 확인중';  // billing_open 미확인
+  } else if (p.billing_account_id) {
+    return '연결됨 🔴 CLOSED';
+  }
+  return '미연결';
+}
+
+function billingDot(p) {
+  if (p.billing_enabled !== 'True') return '<span class="dot dot-gray"></span>';
+  return p.billing_open === 'True'
+    ? '<span class="dot dot-green"></span>'
+    : '<span class="dot dot-yellow"></span>';
+}
+
+function deletableTag(d) {
+  if (d === '빌링연결') return '<span class="tag tag-billing">빌링연결</span>';
+  if (d === '즉시 삭제 가능') return '<span class="tag tag-deletable">즉시 삭제 가능</span>';
+  return '<span class="tag tag-check">소유자 확인 필요</span>';
+}
+
+function fmtUsd(n) {
+  return n == null ? '-' : '$' + Number(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function listenSSE(url, onProgress, onDone, onError) {
+  const es = new EventSource(url);
+  es.onmessage = e => {
+    try {
+      const d = JSON.parse(e.data);
+      if (d.type === 'progress') onProgress(d.pct || 0, d.stage || '', d);
+      else if (d.type === 'done') { es.close(); onDone(d); }
+      else if (d.type === 'error') { es.close(); onError(d.message || '오류'); }
+    } catch(ex) {}
+  };
+  es.onerror = () => { es.close(); onError('SSE 연결 오류'); };
+  return es;
+}
+
+// ── 탭 전환 ──────────────────────────────────────────────────────────
+const NAV_MAP = {
+  'dashboard': 'nav-dash',
+  'gcp-projects': 'nav-gcp-projects',
+  'gcp-resources': 'nav-gcp-resources',
+  'gcp-billing': 'nav-gcp-billing',
+  'aws-accounts': 'nav-aws-accounts',
+  'aws-cmdb': 'nav-aws-cmdb',
+  'aws-costs': 'nav-aws-costs',
+  'aws-org': 'nav-aws-org',
+  'settings': 'nav-settings',
+};
+
+function toggleNavGroup(group) {
+  const items = document.getElementById(`nav-group-${group}-items`);
+  const icon  = document.getElementById(`nav-collapse-${group}`);
+  if (!items) return;
+  const collapsed = items.classList.toggle('collapsed');
+  if (icon) icon.textContent = collapsed ? '▸' : '▾';
+}
+
+function switchTab(name) {
+  // Admin 전용 탭 접근 차단
+  if (USER_ROLE !== 'admin' && ['aws-costs', 'aws-org', 'settings'].includes(name)) {
+    switchTab('dashboard');
+    return;
+  }
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const navId = NAV_MAP[name];
+  if (navId) document.getElementById(navId).classList.add('active');
+  const loaders = {
+    'dashboard': loadDashboard,
+    'gcp-projects': loadGcpProjects,
+    'gcp-resources': loadGcpResources,
+    'gcp-billing': loadGcpBilling,
+    'aws-accounts': loadAwsAccounts,
+    'aws-cmdb': loadAwsCmdb,
+    'aws-costs': loadAwsCosts,
+    'aws-org': loadAwsOrg,
+    'settings': loadSettings,
+  };
+  if (loaders[name]) loaders[name]();
+}
+
+// ── 대시보드 ──────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const ov = await fetch('/api/overview').then(r => r.json());
+    const g = ov.gcp || {};
+    const a = ov.aws || {};
+    document.getElementById('dash-gcp-total').textContent = g.total_projects ?? '-';
+    document.getElementById('dash-gcp-sub').textContent = `빌링 연결 ${g.billing_connected ?? 0} · 미연결 ${(g.total_projects || 0) - (g.billing_connected || 0)}`;
+    document.getElementById('dash-aws-total').textContent = a.total_accounts ?? '-';
+    document.getElementById('dash-gcp-resources').textContent = g.total_resources ?? '-';
+    document.getElementById('dash-gcp-scan-time').textContent = g.last_scan || '-';
+  } catch(e) {}
+
+  // GCP scan table
+  try {
+    const status = await fetch('/api/gcp/status').then(r => r.json());
+    const projs = status.projects || [];
+    const billingOpen   = projs.filter(p => p.billing_open === 'True').length;
+    const billingClosed = projs.filter(p => p.billing_open === 'False' ||
+                            (p.billing_enabled !== 'True' && p.billing_account_id)).length;
+    // billing_enabled=True 이지만 billing_open 미확인(빈값/null) 케이스
+    const billingCheck  = projs.filter(p => p.billing_enabled === 'True' &&
+                            p.billing_open !== 'True' && p.billing_open !== 'False').length;
+    const noBilling     = projs.filter(p => p.billing_enabled !== 'True' && !p.billing_account_id).length;
+    const deletable = projs.filter(p => p.deletable === '즉시 삭제 가능').length;
+    const ownerCheck = projs.filter(p => p.deletable === '소유자 확인 필요').length;
+    document.getElementById('dash-gcp-deletable').textContent = deletable;
+    document.getElementById('dash-gcp-deletable-sub').textContent = `소유자 확인 ${ownerCheck}`;
+    document.getElementById('dash-gcp-table').innerHTML = `
+      <tr><th>구분</th><th class="num">건수</th><th>상태</th></tr>
+      <tr><td>전체 프로젝트</td><td class="num">${projs.length}</td><td><span class="dot dot-green"></span>완료</td></tr>
+      <tr><td>빌링 연결 (OPEN)</td><td class="num">${billingOpen}</td><td><span class="dot dot-green"></span>정상</td></tr>
+      <tr><td>빌링 연결 (CLOSED)</td><td class="num">${billingClosed}</td><td><span class="dot dot-yellow"></span>확인 필요</td></tr>
+      ${billingCheck > 0 ? `<tr><td>빌링 연결 (확인중)</td><td class="num">${billingCheck}</td><td><span class="dot dot-gray"></span>상태 미확인</td></tr>` : ''}
+      <tr><td>빌링 미연결</td><td class="num">${noBilling}</td><td><span class="dot dot-gray"></span>-</td></tr>
+      <tr><td>즉시 삭제 가능</td><td class="num">${deletable}</td><td><span class="dot dot-red"></span>정리 필요</td></tr>
+    `;
+  } catch(e) {}
+
+  // AWS costs
+  try {
+    const costsData = await fetch('/api/aws/costs/summary').then(r => r.json());
+    const summary = costsData.summary || [];
+    const total = summary.reduce((s, a) => s + (a.cost || 0), 0);
+    const top5 = summary.slice(0, 5);
+    const maxCost = top5.length ? top5[0].cost : 1;
+    const month = new Date().toISOString().slice(0, 7);
+    document.getElementById('dash-aws-month').textContent = month;
+    document.getElementById('dash-aws-sub').textContent = `이번달 비용 ${fmtUsd(total)}`;
+    document.getElementById('dash-aws-cost-table').innerHTML = `
+      <tr><th>계정</th><th class="num">USD</th><th>비율</th></tr>
+      ${top5.map(a => {
+        const pct = maxCost ? Math.round((a.cost / maxCost) * 100) : 0;
+        return `<tr><td>${a.name || a.account_id}</td><td class="num">${fmtUsd(a.cost)}</td>
+          <td><div class="cost-bar-wrap"><div class="cost-bar-bg"><div class="cost-bar-fill" style="width:${pct}%"></div></div><span style="font-size:10px;color:var(--t2)">${pct}%</span></div></td></tr>`;
+      }).join('')}
+    `;
+  } catch(e) {}
+
+  // AWS CMDB summary
+  try {
+    const cmdb = await fetch('/api/aws/cmdb/summary').then(r => r.json());
+    const summary = cmdb.summary || [];
+    const totals = {ec2:0, s3:0, rds:0, ecs:0, eks:0, subnet:0};
+    summary.forEach(a => {
+      totals.ec2 += a.ec2 || 0;
+      totals.s3 += a.s3 || 0;
+      totals.rds += a.rds || 0;
+      totals.ecs += a.ecs || 0;
+      totals.eks += a.eks || 0;
+      totals.subnet += a.subnet || 0;
+    });
+    document.getElementById('dash-ec2').textContent = totals.ec2;
+    document.getElementById('dash-s3').textContent = totals.s3;
+    document.getElementById('dash-rds').textContent = totals.rds;
+    document.getElementById('dash-ecs').textContent = totals.ecs;
+    document.getElementById('dash-eks').textContent = totals.eks;
+    document.getElementById('dash-subnet').textContent = totals.subnet;
+  } catch(e) {}
+}
+
+// ── GCP Summary Cards ─────────────────────────────────────────────────
+function updateGcpCards(projects) {
+  const total    = projects.length;
+  const ok       = projects.filter(p => p.deletable === '즉시 삭제 가능').length;
+  const billing  = projects.filter(p => p.deletable === '빌링연결').length;
+  const owner    = projects.filter(p => p.deletable === '소유자 확인 필요').length;
+  // abandonedLevel 함수와 동일한 기준으로 집계 (score≥1)
+  const abandoned = projects.filter(p => abandonedLevel(p) >= 1).length;
+  document.getElementById('gcpCntTotal').textContent    = total.toLocaleString();
+  document.getElementById('gcpCntOk').textContent       = ok.toLocaleString();
+  document.getElementById('gcpCntBilling').textContent  = billing.toLocaleString();
+  document.getElementById('gcpCntOwner').textContent    = owner.toLocaleString();
+  document.getElementById('gcpCntAbandoned').textContent = abandoned.toLocaleString();
+}
+
+function gcpFilterCard(deletable) {
+  _gcpActiveFilter = deletable;
+  // Update card active state
+  document.querySelectorAll('.gcp-card').forEach(c => c.classList.remove('active-filter'));
+  if (deletable === '') document.getElementById('gcpCardTotal').classList.add('active-filter');
+  else if (deletable === '즉시 삭제 가능') document.getElementById('gcpCardOk').classList.add('active-filter');
+  else if (deletable === '빌링연결') document.getElementById('gcpCardBilling').classList.add('active-filter');
+  else if (deletable === '소유자 확인 필요') document.getElementById('gcpCardOwner').classList.add('active-filter');
+  renderGcpProjects();
+}
+
+function gcpFilterAbandoned() {
+  _gcpActiveFilter = '__abandoned__';
+  document.querySelectorAll('.gcp-card').forEach(c => c.classList.remove('active-filter'));
+  document.getElementById('gcpCardAbandoned').classList.add('active-filter');
+  renderGcpProjects();
+}
+
+// ── GCP 프로젝트 ──────────────────────────────────────────────────────
+async function initHistoryDates() {
+  try {
+    const dates = await fetch('/api/history/dates').then(r => r.json());
+    const fill = (selId, kind) => {
+      const sel = document.getElementById(selId);
+      if (!sel) return;
+      const prev = sel.value;
+      while (sel.options.length > 1) sel.remove(1);
+      (dates[kind] || []).forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d; opt.textContent = d;
+        sel.appendChild(opt);
+      });
+      if (prev) sel.value = prev;
+    };
+    fill('gcp-proj-date-sel', 'gcp_projects');
+    fill('gcp-res-date-sel', 'gcp_resources');
+    fill('aws-cmdb-date-sel', 'aws_cmdb');
+  } catch(e) {}
+}
+
+async function loadGcpProjectsByDate(targetDate) {
+  if (!targetDate) { loadGcpProjects(); return; }
+  try {
+    const data = await fetch(`/api/history/data?kind=gcp_projects&target_date=${targetDate}`).then(r => r.json());
+    GCP_PROJECTS = data.projects || [];
+    const lastScan = data.last_scan || targetDate;
+    document.getElementById('gcp-scan-status').innerHTML = `히스토리: <strong>${targetDate}</strong> · ${GCP_PROJECTS.length}개 프로젝트`;
+    document.getElementById('gcp-proj-subtitle').textContent = `${GCP_PROJECTS.length}개`;
+    updateGcpCards(GCP_PROJECTS);
+    renderGcpProjects();
+  } catch(e) {
+    document.getElementById('gcp-scan-status').textContent = '해당 날짜 데이터 없음';
+  }
+}
+
+async function loadGcpResourcesByDate(targetDate) {
+  if (!targetDate) { loadGcpResources(); return; }
+  try {
+    const data = await fetch(`/api/history/data?kind=gcp_resources&target_date=${targetDate}`).then(r => r.json());
+    GCP_RESOURCES = data.projects || [];
+    const total = GCP_RESOURCES.reduce((s, p) => s + (p.total_resources || 0), 0);
+    document.getElementById('gcp-res-scan-status').innerHTML = `히스토리: <strong>${targetDate}</strong> · ${GCP_RESOURCES.length}개 프로젝트 · 총 ${total}개 리소스`;
+    document.getElementById('gcp-res-subtitle').textContent = `${GCP_RESOURCES.length}개 프로젝트 · 총 ${total}개`;
+    updateGcpResStats();
+    Object.keys(_gcpCmdbFlatCache).forEach(k => delete _gcpCmdbFlatCache[k]);
+    loadGcpCmdbFlat(_gcpCmdbType || 'vm');
+  } catch(e) {
+    document.getElementById('gcp-res-scan-status').textContent = '해당 날짜 데이터 없음';
+  }
+}
+
+async function loadAwsCmdbByDate(targetDate) {
+  if (!targetDate) { loadAwsCmdb(); return; }
+  try {
+    const data = await fetch(`/api/history/data?kind=aws_cmdb&target_date=${targetDate}`).then(r => r.json());
+    const rawAccounts = data.accounts || [];
+    // raw CMDB data에서 summary 생성 + 상세 캐시 직접 채우기
+    const totals = {ec2:0, s3:0, rds:0, ecs:0, eks:0, subnet:0};
+    AWS_CMDB_DATA = rawAccounts.map(a => {
+      const ec2 = (a.EC2||[]).length, s3 = (a.S3||[]).length, rds = (a.RDS||[]).length;
+      const ecs = (a.ECS||[]).length, eks = (a.EKS||[]).length, subnet = (a.SUBNET||[]).length;
+      totals.ec2 += ec2; totals.s3 += s3; totals.rds += rds;
+      totals.ecs += ecs; totals.eks += eks; totals.subnet += subnet;
+      const accId = a.project_id || a.account_id;
+      _cmdbDetailCache[accId] = a;
+      return {account_id: accId, account_name: a.project || a.account_name, ec2, s3, rds, ecs, eks, subnet};
+    });
+    document.getElementById('aws-cmdb-status-text').innerHTML = `히스토리: <strong>${targetDate}</strong> · EC2 ${totals.ec2} · S3 ${totals.s3} · RDS ${totals.rds} · ECS ${totals.ecs} · EKS ${totals.eks} · Subnet ${totals.subnet}`;
+    document.getElementById('aws-cmdb-subtitle').textContent = `${AWS_CMDB_DATA.length}개 계정`;
+    renderAwsCmdbTable();
+  } catch(e) {
+    document.getElementById('aws-cmdb-status-text').textContent = '해당 날짜 데이터 없음';
+  }
+}
+
+async function loadGcpProjects() {
+  try {
+    const data = await fetch('/api/gcp/status').then(r => r.json());
+    GCP_PROJECTS = data.projects || [];
+    const lastScan = data.last_scan || '-';
+    document.getElementById('gcp-scan-status').innerHTML = `마지막 스캔: <strong>${lastScan}</strong> · ${GCP_PROJECTS.length}개 프로젝트`;
+    document.getElementById('gcp-proj-subtitle').textContent = `${GCP_PROJECTS.length}개`;
+    updateGcpCards(GCP_PROJECTS);
+    renderGcpProjects();
+  } catch(e) {
+    document.getElementById('gcp-scan-status').textContent = '데이터 로드 실패';
+  }
+}
+
+// ── 방치 프로젝트 판단 ──────────────────────────────────────────────
+// 점수 기준:
+//   사람 소유자(user:/group:) 없음  +2
+//   생성 후 1년 초과               +1
+//   생성 후 2년 초과               +1
+//   생성 후 4년 초과               +1
+//   기본/무명 프로젝트명            +1
+//   test/temp/demo 등 키워드       +1
+//   CLOSED 빌링 계정 연결됨        +1
+// score≥5 → 방치 가능성 높음(2), score≥3 → 방치 의심(1)
+function abandonedLevel(p) {
+  if (p.billing_enabled === 'True') return 0;  // OPEN 빌링 = 활성 사용 중
+  const ageDays = (Date.now() - new Date(p.create_time + 'T00:00:00')) / 86400000;
+  const nameLow = (p.name || '').toLowerCase();
+  const humanOwners = (p.owners || []).filter(o => o.startsWith('user:') || o.startsWith('group:')).length;
+  let score = 0;
+  if (humanOwners === 0) score += 2;
+  if (ageDays > 365)  score += 1;
+  if (ageDays > 730)  score += 1;
+  if (ageDays > 1460) score += 1;
+  if (!p.name || nameLow.startsWith('my project') || nameLow === 'my first project') score += 1;
+  if (['test','temp','demo','sandbox','playground','sample','trial'].some(k => nameLow.includes(k))) score += 1;
+  if (p.billing_account_id && p.billing_enabled !== 'True') score += 1;
+  if (score >= 5) return 2;
+  if (score >= 3) return 1;
+  return 0;
+}
+
+function abandonedBadge(p) {
+  const lv = abandonedLevel(p);
+  if (lv === 2) return '<span class="badge badge-abandon2">방치 가능성 높음</span>';
+  if (lv === 1) return '<span class="badge badge-abandon1">방치 의심</span>';
+  return '<span style="color:var(--t3);font-size:11px">-</span>';
+}
+
+function renderGcpProjects() {
+  const fBilling   = document.getElementById('gcp-filter-billing').value;
+  const fDeletable = document.getElementById('gcp-filter-deletable').value;
+  const fOwner     = document.getElementById('gcp-filter-owner').value;
+  const fAbandoned = document.getElementById('gcp-filter-abandoned')?.value || '';
+  const fSearch    = document.getElementById('gcp-filter-search').value.toLowerCase();
+
+  let filtered = GCP_PROJECTS;
+
+  // 카드 필터
+  if (_gcpActiveFilter === '__abandoned__') {
+    filtered = filtered.filter(p => abandonedLevel(p) >= 1);
+  } else if (_gcpActiveFilter) {
+    filtered = filtered.filter(p => p.deletable === _gcpActiveFilter);
+  }
+
+  // 드롭다운 필터
+  filtered = filtered.filter(p => {
+    if (fBilling === 'open'   && p.billing_open !== 'True') return false;
+    if (fBilling === 'closed' && !(p.billing_open === 'False' || (p.billing_enabled !== 'True' && p.billing_account_id))) return false;
+    if (fBilling === 'none'   && (p.billing_enabled === 'True' || p.billing_account_id)) return false;
+    if (fDeletable && p.deletable !== fDeletable) return false;
+    if (USER_ROLE === 'admin') {
+      if (fOwner === 'yes' && !(p.owners && p.owners.length > 0)) return false;
+      if (fOwner === 'no'  &&  (p.owners && p.owners.length > 0)) return false;
+    }
+    if (fAbandoned === '1' && abandonedLevel(p) < 1) return false;
+    if (fAbandoned === '2' && abandonedLevel(p) < 2) return false;
+    if (fSearch && !p.project_id.toLowerCase().includes(fSearch) &&
+        !p.name.toLowerCase().includes(fSearch) &&
+        !(USER_ROLE === 'admin' && (p.owners||[]).some(o => o.toLowerCase().includes(fSearch)))) return false;
+    return true;
+  });
+
+  const deletableCount = GCP_PROJECTS.filter(p => p.deletable === '즉시 삭제 가능').length;
+  document.getElementById('gcp-count-badge').textContent = `${filtered.length}개`;
+  document.getElementById('gcp-deletable-badge').textContent = deletableCount > 0 ? `즉시삭제 ${deletableCount}개` : '';
+
+  const tbody = document.getElementById('gcp-projects-tbody');
+  const isAdmin = USER_ROLE === 'admin';
+  const colCount = isAdmin ? 9 : 8;
+
+  // 헤더·필터·툴바 admin 여부에 따라 조정
+  const thead = document.getElementById('gcp-projects-thead');
+  if (thead) {
+    const chkAll = isAdmin ? `<th style="width:28px"><input type="checkbox" id="gcp-check-all" onclick="toggleAllGcpChecks(this)"></th>` : '<th style="width:28px"></th>';
+    thead.innerHTML = `${chkAll}<th>프로젝트 ID</th><th>이름</th><th>생성일</th><th>빌링 상태</th><th>빌링 계정</th>${isAdmin?'<th>소유자</th>':''}<th>삭제 여부</th><th>방치 여부</th>`;
+  }
+  const toolbar = document.getElementById('gcp-delete-toolbar');
+  if (toolbar) toolbar.style.display = isAdmin ? 'flex' : 'none';
+  const ownerFilter = document.getElementById('gcp-filter-owner');
+  if (ownerFilter) ownerFilter.style.display = isAdmin ? '' : 'none';
+  const searchInput = document.getElementById('gcp-filter-search');
+  if (searchInput) searchInput.placeholder = isAdmin ? '🔍 프로젝트 ID / 소유자 검색...' : '🔍 프로젝트 ID 검색...';
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center;color:var(--t2);padding:32px">결과가 없습니다</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.slice(0, 200).map(p => {
+    const owners = (p.owners || []).join('\n');
+    const canDelete = isAdmin && p.deletable !== '빌링연결';
+    const chkCell = isAdmin
+      ? `<td style="text-align:center"><input type="checkbox" class="gcp-proj-check" value="${p.project_id}" ${canDelete?'':'disabled'} onchange="updateGcpDeleteToolbar()"></td>`
+      : '<td></td>';
+    return `<tr>
+      ${chkCell}
+      <td style="font-family:monospace;font-size:11px;color:var(--t2)">${p.project_id}</td>
+      <td>${p.name || '-'}</td>
+      <td style="color:var(--t2);font-size:11px">${p.create_time || '-'}</td>
+      <td>${billingDot(p)}${billingStatus(p)}</td>
+      <td style="font-family:monospace;font-size:10px;color:var(--t3)">${p.billing_account_id || '-'}</td>
+      ${isAdmin?`<td style="font-size:11px">${owners || '<span style="color:var(--t3)">-</span>'}</td>`:''}
+      <td>${deletableTag(p.deletable)}</td>
+      <td>${abandonedBadge(p)}</td>
+    </tr>`;
+  }).join('');
+
+  if (filtered.length > 200) {
+    tbody.innerHTML += `<tr><td colspan="${colCount}" style="text-align:center;color:var(--t2);font-size:11px;padding:8px">외 ${filtered.length - 200}개 더 있습니다 (필터를 적용하세요)</td></tr>`;
+  }
+  updateGcpDeleteToolbar();
+}
+
+async function startGcpScan() {
+  const btn = document.getElementById('gcp-scan-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 스캔 중...';
+  document.getElementById('gcp-scan-progress').style.display = 'flex';
+
+  await fetch('/api/gcp/scan', {method: 'POST', credentials: 'same-origin'});
+  listenSSE('/api/gcp/scan/stream',
+    (pct, stage) => {
+      document.getElementById('gcp-progress-bar').style.width = pct + '%';
+      document.getElementById('gcp-progress-text').textContent = stage;
+    },
+    async () => {
+      btn.disabled = false;
+      btn.textContent = '🔄 전체 스캔';
+      document.getElementById('gcp-scan-progress').style.display = 'none';
+      await loadGcpProjects();
+    },
+    (msg) => {
+      btn.disabled = false;
+      btn.textContent = '🔄 전체 스캔';
+      document.getElementById('gcp-progress-text').textContent = '오류: ' + msg;
+    }
+  );
+}
+
+function toggleAllGcpChecks(masterCb) {
+  document.querySelectorAll('.gcp-proj-check:not(:disabled)').forEach(cb => {
+    cb.checked = masterCb.checked;
+  });
+  updateGcpDeleteToolbar();
+}
+
+function updateGcpDeleteToolbar() {
+  const checked = document.querySelectorAll('.gcp-proj-check:checked');
+  const countEl = document.getElementById('gcp-check-count');
+  const btn = document.getElementById('gcp-delete-selected-btn');
+  if (countEl) countEl.textContent = `${checked.length}개 선택`;
+  if (btn) btn.disabled = checked.length === 0;
+  // 전체선택 체크박스 상태 동기화
+  const all = document.querySelectorAll('.gcp-proj-check:not(:disabled)');
+  const masterCb = document.getElementById('gcp-check-all');
+  if (masterCb && all.length > 0) {
+    masterCb.indeterminate = checked.length > 0 && checked.length < all.length;
+    masterCb.checked = checked.length === all.length;
+  }
+}
+
+async function deleteSelectedGcpProjects() {
+  const checked = [...document.querySelectorAll('.gcp-proj-check:checked')];
+  if (!checked.length) return;
+  const pids = checked.map(cb => cb.value);
+  if (!confirm(`선택한 ${pids.length}개 프로젝트를 삭제하시겠습니까?\n\n${pids.join('\n')}`)) return;
+  const res = await fetch('/api/gcp/projects/delete', {
+    method: 'POST', credentials: 'same-origin',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({project_ids: pids})
+  }).then(r => r.json());
+  const results = res.results || [];
+  const ok = results.filter(r => r.success).length;
+  const fail = results.filter(r => !r.success);
+  let msg = `${ok}개 삭제 완료`;
+  if (fail.length) msg += `\n실패 ${fail.length}개:\n` + fail.map(r => `${r.project_id}: ${r.message}`).join('\n');
+  alert(msg);
+  loadGcpProjects();
+}
+
+async function downloadGcpExcel() {
+  window.location.href = '/api/gcp/export';
+}
+
+// ── GCP 리소스 CMDB ───────────────────────────────────────────────────
+async function loadGcpResources() {
+  try {
+    const data = await fetch('/api/gcp/resources').then(r => r.json());
+    GCP_RESOURCES = data.projects || [];
+    const lastScan = data.last_scan || '-';
+    const total = GCP_RESOURCES.reduce((s, p) => s + (p.total_resources || 0), 0);
+    document.getElementById('gcp-res-scan-status').innerHTML = `마지막 스캔: <strong>${lastScan}</strong> · ${GCP_RESOURCES.length}개 프로젝트 · 총 ${total}개 리소스`;
+    document.getElementById('gcp-res-subtitle').textContent = `${GCP_RESOURCES.length}개 프로젝트 · 총 ${total}개`;
+    updateGcpResStats();
+    // 플랫 캐시 초기화 (새 스캔 결과 반영)
+    Object.keys(_gcpCmdbFlatCache).forEach(k => delete _gcpCmdbFlatCache[k]);
+    // 백엔드 캐시 상태 확인 후 CMDB 로드
+    await loadGcpCmdbCacheStatus();
+    loadGcpCmdbFlat(_gcpCmdbType || 'vm');
+  } catch(e) {
+    document.getElementById('gcp-res-scan-status').textContent = '데이터 로드 실패';
+  }
+}
+
+async function loadGcpCmdbCacheStatus() {
+  try {
+    const st = await fetch('/api/gcp/cmdb/cache/status').then(r => r.json());
+    const infoEl = document.getElementById('gcp-cmdb-cache-info');
+    if (st.built_at) {
+      if (infoEl) infoEl.textContent = `🗄 캐시: ${st.built_at} · ${st.total_projects}개 항목`;
+    } else {
+      if (infoEl) infoEl.textContent = '캐시 없음 — 캐시 빌드 후 즉시 조회 가능';
+    }
+  } catch(e) {}
+}
+
+async function buildGcpCmdbCache() {
+  if (USER_ROLE !== 'admin') { alert('관리자 로그인이 필요합니다'); return; }
+  const btn = document.getElementById('gcp-cmdb-cache-btn');
+  const bar = document.getElementById('gcp-cmdb-cache-bar');
+  const progEl = document.getElementById('gcp-cmdb-cache-prog');
+  const stageEl = document.getElementById('gcp-cmdb-cache-stage');
+  const pctEl = document.getElementById('gcp-cmdb-cache-pct');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ 빌드 중...';
+  bar.style.display = 'block';
+  progEl.style.width = '0%';
+
+  try {
+    const res = await fetch('/api/gcp/cmdb/cache/build', {method:'POST', credentials:'same-origin'}).then(r => r.json());
+    if (res.status === 'already_running') { alert('이미 빌드 중입니다'); btn.disabled = false; btn.textContent = '🗄 캐시 빌드'; return; }
+
+    // SSE 스트림으로 진행률 수신
+    const es = new EventSource('/api/gcp/cmdb/cache/stream');
+    es.onmessage = e => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'progress') {
+        progEl.style.width = msg.pct + '%';
+        stageEl.textContent = msg.stage || '빌드 중...';
+        pctEl.textContent = msg.pct + '%';
+      } else if (msg.type === 'done') {
+        es.close();
+        progEl.style.width = '100%';
+        stageEl.textContent = '빌드 완료!';
+        pctEl.textContent = '100%';
+        btn.disabled = false;
+        btn.textContent = '🗄 캐시 빌드';
+        // 캐시 재로드 후 현재 타입 즉시 표시
+        Object.keys(_gcpCmdbFlatCache).forEach(k => delete _gcpCmdbFlatCache[k]);
+        setTimeout(() => { bar.style.display = 'none'; loadGcpCmdbCacheStatus(); loadGcpCmdbFlat(_gcpCmdbType); }, 1500);
+      } else if (msg.type === 'error') {
+        es.close();
+        stageEl.textContent = '오류: ' + (msg.message || '');
+        btn.disabled = false;
+        btn.textContent = '🗄 캐시 빌드';
+      }
+    };
+    es.onerror = () => { es.close(); btn.disabled = false; btn.textContent = '🗄 캐시 빌드'; };
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '🗄 캐시 빌드';
+    alert('빌드 시작 실패: ' + e.message);
+  }
+}
+
+function updateGcpResStats() {
+  const totals = {};
+  GCP_RESOURCES.forEach(p => {
+    const res = p.resources || {};
+    Object.entries(res).forEach(([k, v]) => totals[k] = (totals[k] || 0) + v);
+  });
+  const map = {vm:'vm', run:'run', functions:'fn', gke:'gke', storage:'storage', sql:'sql', pubsub:'pubsub', vpc:'vpc', sa:'sa'};
+  Object.entries(map).forEach(([k, id]) => {
+    const el = document.getElementById('gcp-res-' + id);
+    if (el) el.textContent = totals[k] || 0;
+  });
+}
+
+// GCP CMDB 플랫 테이블용 캐시 {type: [{_project, ...fields}]}
+const _gcpCmdbFlatCache = {};
+let _gcpCmdbLoading = false;
+let _gcpProjFilter = '';  // 프로젝트 컬럼 헤더 드롭다운 선택값
+
+const _GCP_TYPE_LABELS = {vm:'VM 인스턴스', run:'Cloud Run 서비스', fn:'Cloud Functions',
+  gke:'GKE 클러스터', storage:'Storage 버킷', sql:'Cloud SQL', pubsub:'PubSub 토픽',
+  vpc:'VPC 네트워크', lb:'Load Balancer', sa:'서비스 계정', sink:'로그 싱크'};
+
+const _GCP_RES_KEY_MAP = {vm:'vm', run:'run', fn:'functions', gke:'gke', storage:'storage',
+  sql:'sql', pubsub:'pubsub', vpc:'vpc', lb:'lb', sa:'sa', sink:'log_sink'};
+
+function switchGcpCmdb(type) {
+  _gcpCmdbType = type;
+  document.querySelectorAll('.gcmdb-tab').forEach(el => el.classList.remove('active-gcmdb'));
+  document.querySelectorAll(`.gcmdb-tab[data-gtype="${type}"]`).forEach(el => el.classList.add('active-gcmdb'));
+  _gcpProjFilter = '';  // 타입 전환 시 프로젝트 필터 초기화
+  loadGcpCmdbFlat(type);
+}
+
+async function loadGcpCmdbFlat(type) {
+  const titleEl  = document.getElementById('gcp-cmdb-table-title');
+  const statusEl = document.getElementById('gcp-cmdb-load-status');
+  if (titleEl) titleEl.textContent = _GCP_TYPE_LABELS[type] || type;
+
+  // JS 메모리 캐시 히트 → 즉시 렌더
+  if (_gcpCmdbFlatCache[type]) {
+    renderGcpCmdbFlat();
+    return;
+  }
+
+  if (_gcpCmdbLoading) return;
+  _gcpCmdbLoading = true;
+
+  // ① 백엔드 캐시 파일에 해당 타입이 있으면 단일 요청으로 즉시 로드
+  try {
+    const cached = await fetch(`/api/gcp/cmdb/cache/data?type=${type}`).then(r => r.json());
+    if ((cached.items || []).length > 0) {
+      _gcpCmdbFlatCache[type] = cached.items;
+      if (statusEl) statusEl.textContent = `총 ${cached.items.length}개 🗄 캐시`;
+      _gcpCmdbLoading = false;
+      _updateGcpProjectFilter(type);
+      renderGcpCmdbFlat();
+      return;
+    }
+  } catch(e) {}
+
+  // ② 백엔드 캐시 없음 → 프로젝트별 on-demand 수집
+  const resKey = _GCP_RES_KEY_MAP[type] || type;
+  const targets = GCP_RESOURCES.filter(p => (p.resources || {})[resKey] > 0);
+
+  if (!targets.length) {
+    document.getElementById('gcp-cmdb-tbody').innerHTML =
+      '<tr><td colspan="8" style="text-align:center;color:var(--t2);padding:32px">해당 리소스가 없습니다 (스캔 먼저 실행)</td></tr>';
+    document.getElementById('gcp-cmdb-count').textContent = '0개';
+    if (statusEl) statusEl.textContent = '';
+    _gcpCmdbLoading = false;
+    return;
+  }
+
+  if (statusEl) statusEl.textContent = `⏳ 0/${targets.length} 프로젝트 로딩 중...`;
+  document.getElementById('gcp-cmdb-tbody').innerHTML =
+    `<tr><td colspan="8" class="loading">⏳ ${targets.length}개 프로젝트 상세 조회 중...</td></tr>`;
+
+  let done = 0;
+  const allItems = [];
+
+  await Promise.allSettled(targets.map(async p => {
+    try {
+      const data = await fetch(
+        `/api/gcp/resources/detail?project_id=${encodeURIComponent(p.project_id)}&type=${type}`
+      ).then(r => r.json());
+      (data.items || []).forEach(item => allItems.push({...item, _project: p.project_id}));
+    } catch(e) {}
+    done++;
+    if (statusEl) statusEl.textContent = `⏳ ${done}/${targets.length} 로딩 중...`;
+  }));
+
+  _gcpCmdbFlatCache[type] = allItems;
+  if (statusEl) statusEl.textContent = `총 ${allItems.length}개`;
+  _gcpCmdbLoading = false;
+  _updateGcpProjectFilter(type);
+  renderGcpCmdbFlat();
+}
+
+function _updateGcpProjectFilter(type) {
+  // 테이블 헤더 내 드롭다운 갱신 (renderGcpCmdbFlat가 헤더를 재생성하므로 이후 _refreshProjTh 호출)
+  _refreshProjTh(type);
+}
+
+function _refreshProjTh(type) {
+  const th = document.getElementById('gcp-proj-th');
+  if (!th) return;
+  const projects = [...new Set((_gcpCmdbFlatCache[type] || []).map(r => r._project))].sort();
+  const opts = '<option value="">전체 프로젝트</option>' +
+    projects.map(p => `<option value="${p}"${p === _gcpProjFilter ? ' selected' : ''}>${p}</option>`).join('');
+  th.innerHTML = `<select onclick="event.stopPropagation()" onchange="_gcpProjFilter=this.value;renderGcpCmdbFlat()"
+    style="font-size:11px;font-weight:600;border:none;border-bottom:2px solid #dadce0;border-radius:0;padding:2px 4px;background:transparent;cursor:pointer;color:#3c4043;outline:none;max-width:160px">
+    ${opts}
+  </select>`;
+}
+
+function renderGcpCmdbFlat() {
+  const type      = _gcpCmdbType;
+  const projFilter = _gcpProjFilter;
+  const search    = (document.getElementById('gcp-res-search').value || '').toLowerCase();
+  const thead  = document.getElementById('gcp-cmdb-thead');
+  const tbody  = document.getElementById('gcp-cmdb-tbody');
+  const countEl = document.getElementById('gcp-cmdb-count');
+  if (!thead || !tbody) return;
+
+  const all = _gcpCmdbFlatCache[type] || [];
+  const rows = all.filter(r =>
+    (!projFilter || r._project === projFilter) &&
+    (!search || JSON.stringify(r).toLowerCase().includes(search))
+  );
+
+  if (countEl) countEl.textContent = `${rows.length}개`;
+
+  const tag = p => `<span class="tag tag-gcp-project" style="font-size:10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle" title="${p}">${p}</span>`;
+  const dot = s => `<span class="dot ${(s||'').toUpperCase()==='RUNNING'||(s||'').toUpperCase()==='ACTIVE'||(s||'').toUpperCase()==='READY'?'dot-green':'dot-red'}"></span>`;
+  const noData = n => `<tr><td colspan="${n}" style="text-align:center;color:var(--t2);padding:32px">데이터 없음</td></tr>`;
+
+  if (type === 'vm') {
+    thead.innerHTML = '<tr><th id="gcp-proj-th">프로젝트</th><th>인스턴스명</th><th>존</th><th>머신 타입</th><th>상태</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._project)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td style="font-size:11px;color:var(--t2)">${r.zone || '-'}</td>
+      <td style="font-family:monospace;font-size:11px">${r.machine_type || '-'}</td>
+      <td>${dot(r.status)}${r.status || '-'}</td>
+    </tr>`).join('') || noData(5);
+
+  } else if (type === 'run') {
+    thead.innerHTML = '<tr><th id="gcp-proj-th">프로젝트</th><th>서비스명</th><th>리전</th><th>URL</th><th>상태</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._project)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td style="font-size:11px">${r.region || '-'}</td>
+      <td style="font-size:10px;color:var(--t2);max-width:180px;overflow:hidden;text-overflow:ellipsis">${r.url || '-'}</td>
+      <td>${dot(r.status)}${r.status || '-'}</td>
+    </tr>`).join('') || noData(5);
+
+  } else if (type === 'fn') {
+    thead.innerHTML = '<tr><th id="gcp-proj-th">프로젝트</th><th>함수명</th><th>리전</th><th>런타임</th><th>상태</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._project)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td style="font-size:11px">${r.region || '-'}</td>
+      <td style="font-family:monospace;font-size:11px">${r.runtime || '-'}</td>
+      <td>${dot(r.status)}${r.status || '-'}</td>
+    </tr>`).join('') || noData(5);
+
+  } else if (type === 'gke') {
+    thead.innerHTML = '<tr><th id="gcp-proj-th">프로젝트</th><th>클러스터명</th><th>위치</th><th>노드 수</th><th>버전</th><th>상태</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._project)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td style="font-size:11px">${r.location || '-'}</td>
+      <td class="num">${r.node_count ?? '-'}</td>
+      <td style="font-family:monospace;font-size:11px">${r.version || '-'}</td>
+      <td>${dot(r.status)}${r.status || '-'}</td>
+    </tr>`).join('') || noData(6);
+
+  } else if (type === 'storage') {
+    thead.innerHTML = '<tr><th id="gcp-proj-th">프로젝트</th><th>버킷명</th><th>위치</th><th>스토리지 클래스</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._project)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td style="font-size:11px">${r.location || '-'}</td>
+      <td style="font-family:monospace;font-size:11px">${r.storage_class || '-'}</td>
+    </tr>`).join('') || noData(4);
+
+  } else if (type === 'sql') {
+    thead.innerHTML = '<tr><th id="gcp-proj-th">프로젝트</th><th>인스턴스명</th><th>DB 버전</th><th>리전</th><th>티어</th><th>상태</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._project)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td style="font-family:monospace;font-size:11px">${r.database || '-'}</td>
+      <td style="font-size:11px">${r.region || '-'}</td>
+      <td style="font-family:monospace;font-size:11px">${r.tier || '-'}</td>
+      <td>${dot(r.status)}${r.status || '-'}</td>
+    </tr>`).join('') || noData(6);
+
+  } else if (type === 'pubsub') {
+    thead.innerHTML = '<tr><th id="gcp-proj-th">프로젝트</th><th>토픽명</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._project)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+    </tr>`).join('') || noData(2);
+
+  } else if (type === 'vpc') {
+    thead.innerHTML = '<tr><th id="gcp-proj-th">프로젝트</th><th>네트워크명</th><th>서브넷 수</th><th>자동 생성</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._project)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td class="num">${r.subnets ?? '-'}</td>
+      <td>${r.auto_create ? '✓' : '-'}</td>
+    </tr>`).join('') || noData(4);
+
+  } else if (type === 'lb') {
+    thead.innerHTML = `<tr><th id="gcp-proj-th">프로젝트</th><th>규칙명</th><th>리전</th>${USER_ROLE==='admin'?'<th>IP</th>':''}<th>프로토콜</th><th>유형</th></tr>`;
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._project)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td style="font-size:11px">${r.region || '-'}</td>
+      ${USER_ROLE==='admin'?`<td style="font-family:monospace;font-size:11px">${r.ip || '-'}</td>`:''}
+      <td style="font-size:11px">${r.protocol || '-'}</td>
+      <td style="font-size:11px;color:var(--t2)">${r.load_balancing_scheme || '-'}</td>
+    </tr>`).join('') || noData(USER_ROLE==='admin'?6:5);
+
+  } else if (type === 'sa') {
+    thead.innerHTML = '<tr><th id="gcp-proj-th">프로젝트</th><th>표시 이름</th><th>이메일</th><th>비활성</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._project)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td style="font-family:monospace;font-size:11px;color:var(--t2)">${r.email || '-'}</td>
+      <td>${r.disabled ? '<span style="color:#e53935">비활성</span>' : '-'}</td>
+    </tr>`).join('') || noData(4);
+
+  } else if (type === 'sink') {
+    thead.innerHTML = '<tr><th id="gcp-proj-th">프로젝트</th><th>싱크명</th><th>목적지</th><th>필터</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._project)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td style="font-size:11px;color:var(--t2)">${r.destination || '-'}</td>
+      <td style="font-size:11px;color:var(--t2)">${r.filter || '-'}</td>
+    </tr>`).join('') || noData(4);
+
+  } else {
+    thead.innerHTML = '<tr><th id="gcp-proj-th">프로젝트</th><th>이름</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._project)}</td><td>${r.name || '-'}</td>
+    </tr>`).join('') || noData(2);
+  }
+
+  // 프로젝트 컬럼 헤더 드롭다운 갱신 (thead 재생성 후 호출)
+  _refreshProjTh(type);
+}
+
+// 하위 호환 (기존 코드에서 호출할 수 있으므로 유지)
+function renderGcpCmdbTable() { renderGcpCmdbFlat(); }
+
+const _gcpDetailCache = {};  // {pid_type: items[]}
+
+async function toggleGcpDetail(pid, type, resKey, tr) {
+  const row    = document.getElementById(`gcp-detail-row-${pid}`);
+  const panel  = document.getElementById(`gcp-detail-panel-${pid}`);
+  const arrow  = document.getElementById(`gcp-detail-arrow-${pid}`);
+  if (!row) return;
+
+  const isOpen = row.style.display !== 'none';
+  if (isOpen) {
+    row.style.display = 'none';
+    if (arrow) arrow.textContent = '▶';
+    return;
+  }
+
+  row.style.display = '';
+  if (arrow) arrow.textContent = '▼';
+
+  const cacheKey = `${pid}__${type}`;
+  if (_gcpDetailCache[cacheKey]) {
+    renderGcpDetailPanel(panel, type, _gcpDetailCache[cacheKey]);
+    return;
+  }
+
+  panel.innerHTML = '<div style="color:var(--t2);padding:4px 0">⏳ 로딩 중...</div>';
+  try {
+    const data = await fetch(`/api/gcp/resources/detail?project_id=${encodeURIComponent(pid)}&type=${type}`)
+      .then(r => r.json());
+    _gcpDetailCache[cacheKey] = data.items || [];
+    renderGcpDetailPanel(panel, type, _gcpDetailCache[cacheKey]);
+  } catch(e) {
+    panel.innerHTML = `<div style="color:var(--red)">오류: ${e.message}</div>`;
+  }
+}
+
+function renderGcpDetailPanel(panel, type, items) {
+  if (!items.length) {
+    panel.innerHTML = '<div style="color:var(--t2);padding:4px 0">데이터 없음</div>';
+    return;
+  }
+
+  const colDefs = {
+    vm:      [{k:'name',l:'이름'},{k:'zone',l:'존'},{k:'machine_type',l:'머신 타입'},{k:'status',l:'상태'}],
+    run:     [{k:'name',l:'서비스명'},{k:'region',l:'리전'},{k:'url',l:'URL'},{k:'status',l:'상태'}],
+    fn:      [{k:'name',l:'함수명'},{k:'region',l:'리전'},{k:'runtime',l:'런타임'},{k:'status',l:'상태'}],
+    gke:     [{k:'name',l:'클러스터'},{k:'location',l:'위치'},{k:'node_count',l:'노드 수'},{k:'version',l:'버전'},{k:'status',l:'상태'}],
+    storage: [{k:'name',l:'버킷명'},{k:'location',l:'위치'},{k:'storage_class',l:'스토리지 클래스'}],
+    sql:     [{k:'name',l:'인스턴스'},{k:'database',l:'DB 버전'},{k:'region',l:'리전'},{k:'tier',l:'티어'},{k:'status',l:'상태'}],
+    pubsub:  [{k:'name',l:'토픽명'}],
+    vpc:     [{k:'name',l:'네트워크명'},{k:'subnets',l:'서브넷 수'},{k:'auto_create',l:'자동 생성'}],
+    lb:      [{k:'name',l:'규칙명'},{k:'region',l:'리전'},...(USER_ROLE==='admin'?[{k:'ip',l:'IP'}]:[]),{k:'protocol',l:'프로토콜'},{k:'load_balancing_scheme',l:'유형'}],
+    sa:      [{k:'name',l:'표시 이름'},{k:'email',l:'이메일'},{k:'disabled',l:'비활성'}],
+    sink:    [{k:'name',l:'싱크명'},{k:'destination',l:'목적지'},{k:'filter',l:'필터'}],
+  };
+  const cols = colDefs[type] || Object.keys(items[0]).map(k => ({k, l:k}));
+
+  panel.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:11px;margin:4px 0">
+      <thead>
+        <tr style="background:#e8eaed">
+          ${cols.map(c => `<th style="padding:4px 8px;text-align:left;font-weight:600">${c.l}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map(item => `
+          <tr style="border-top:1px solid #f0f2f5">
+            ${cols.map(c => {
+              let v = item[c.k];
+              if (v === true) v = '✓';
+              else if (v === false) v = '-';
+              else if (v === null || v === undefined) v = '-';
+              const isStatus = c.k === 'status';
+              const color = isStatus && v === 'RUNNING' ? 'color:#1e8e3e' :
+                            isStatus && v === 'STOPPED' ? 'color:#e53935' : '';
+              return `<td style="padding:4px 8px;${color}">${v}</td>`;
+            }).join('')}
+          </tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="color:var(--t2);font-size:10px;margin-top:2px;text-align:right">${items.length}개</div>`;
+}
+
+async function startGcpResourceScan() {
+  const btn = document.getElementById('gcp-res-scan-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 스캔 중...';
+  document.getElementById('gcp-res-progress').style.display = 'flex';
+
+  await fetch('/api/gcp/resources/scan', {method: 'POST', credentials: 'same-origin'});
+  listenSSE('/api/gcp/resources/stream',
+    (pct, stage) => {
+      document.getElementById('gcp-res-progress-bar').style.width = pct + '%';
+      document.getElementById('gcp-res-progress-text').textContent = stage;
+    },
+    async () => {
+      btn.disabled = false;
+      btn.textContent = '🔄 리소스 재스캔';
+      document.getElementById('gcp-res-progress').style.display = 'none';
+      await loadGcpResources();
+    },
+    (msg) => {
+      btn.disabled = false;
+      btn.textContent = '🔄 리소스 재스캔';
+      document.getElementById('gcp-res-progress-text').textContent = '오류: ' + msg;
+    }
+  );
+}
+
+// ── GCP 빌링 ─────────────────────────────────────────────────────────
+async function loadGcpBilling() {
+  let hasConfig = false;
+  try {
+    const settings = await fetch('/api/gcp/billing/settings').then(r => r.json());
+    document.getElementById('bq-project-input').value = settings.bq_project || '';
+    document.getElementById('bq-dataset-input').value = settings.bq_dataset || '';
+    hasConfig = !!(settings.bq_project && settings.bq_dataset);
+  } catch(e) {}
+
+  const statusEl = document.getElementById('gcp-billing-status-text');
+  const noConfigEl = document.getElementById('gcp-billing-no-config');
+  // BigQuery 미설정이어도 스캔 가능 — 모드 안내만 표시
+  if (noConfigEl) noConfigEl.style.display = hasConfig ? 'none' : '';
+  if (statusEl) statusEl.textContent = hasConfig
+    ? 'BigQuery 설정 완료 — 상세 프로젝트별 비용 조회 가능'
+    : 'BigQuery 미설정 — 빌링 계정 단위 비용으로 스캔 가능';
+
+  try {
+    const data = await fetch('/api/gcp/billing/costs').then(r => r.json());
+    GCP_BILLING_COSTS = data.costs || {};
+    renderBillingAccounts(data);
+    const entries = Object.entries(data.costs || {});
+    if (entries.length && statusEl) {
+      const modeLabel = data.mode === 'bigquery' ? 'BigQuery' : '빌링 계정 단위';
+      statusEl.textContent = `마지막 스캔: ${data.last_scan || '-'} · 빌링 계정 ${entries.length}개 · ${modeLabel}`;
+    }
+  } catch(e) {}
+}
+
+function renderBillingAccounts(data) {
+  const costs = data.costs || {};
+  const mode = data.mode || '';
+  const isRecommender = mode !== 'bigquery';
+  const tbody = document.getElementById('billing-accounts-tbody');
+  const entries = Object.entries(costs);
+  document.getElementById('billing-account-count').textContent = `${entries.length}개`;
+
+  // 헤더 컬럼 동적 조정
+  const thead = document.querySelector('#tab-gcp-billing table tr:first-child');
+  if (thead) {
+    thead.innerHTML = isRecommender
+      ? '<th>빌링 계정 ID</th><th>이름</th><th>상태</th><th class="num">프로젝트</th><th class="num">인보이스</th><th class="num">Recommender 추정</th>'
+      : '<th>빌링 계정 ID</th><th>이름</th><th>상태</th><th class="num">프로젝트</th><th class="num">최근 비용</th>';
+  }
+
+  if (!entries.length) {
+    tbody.innerHTML = `<tr><td colspan="${isRecommender ? 6 : 5}" style="text-align:center;color:var(--t2);padding:32px">데이터 없음. 비용 스캔을 실행하세요.</td></tr>`;
+    return;
+  }
+
+  const fmt = (v, cur) => v != null ? `${fmtUsd(v)} ${cur || ''}`.trim() : '-';
+
+  tbody.innerHTML = entries.map(([bid, info]) => {
+    const isOpen = info.open === true || info.open === 'True';
+    const status = info.open == null ? '<span style="color:var(--t3)">접근불가</span>' :
+      (isOpen ? '<span class="dot dot-green"></span>OPEN' : '<span class="dot dot-red"></span>CLOSED');
+    const name = info.display_name || info.name || '-';
+    const projCount = info.project_count != null ? info.project_count : '-';
+    const invoiceCost = fmt(info._total, info._currency);
+    const recCost = info._rec_total != null ? fmt(info._rec_total, info._rec_currency) : '-';
+
+    // _projects(비용 포함) 또는 project_ids(목록만) 둘 다 지원
+    const hasProjectsCost = info._projects && Object.keys(info._projects).length > 0;
+    const hasProjIds = !hasProjectsCost && info.project_ids && info.project_ids.length > 0;
+    const hasProjects = hasProjectsCost || hasProjIds;
+    const colSpan = isRecommender ? 6 : 5;
+    const rowId = `brow-${bid.replace(/\//g, '-')}`;
+
+    let row = `<tr style="cursor:${hasProjects ? 'pointer' : 'default'}"
+      onclick="${hasProjects ? `toggleBillingProjects('${rowId}')` : ''}">
+      <td style="font-family:monospace;font-size:11px;color:var(--t2)">${bid}</td>
+      <td>${name}</td>
+      <td>${status}</td>
+      <td class="num">${projCount}${hasProjects ? ' ▾' : ''}</td>`;
+
+    if (isRecommender) {
+      row += `<td class="num" style="color:var(--t2)">${invoiceCost}</td>
+              <td class="num" style="font-weight:600;color:${info._rec_total > 0 ? '#1a73e8' : 'inherit'}">${recCost}</td>`;
+    } else {
+      row += `<td class="num">${invoiceCost}</td>`;
+    }
+    row += '</tr>';
+
+    // 프로젝트별 상세 행 (접힘 상태)
+    if (hasProjectsCost) {
+      // 비용 포함 프로젝트 목록
+      const projRows = Object.entries(info._projects).sort((a, b) => (b[1]._total||0) - (a[1]._total||0)).map(([pid, pc]) =>
+        `<tr id="${rowId}" style="display:none;background:#f8f9fa">
+          <td colspan="3" style="padding-left:28px;font-size:11px;color:var(--t2);font-family:monospace">${pid}</td>
+          <td></td>
+          ${isRecommender ? '<td></td>' : ''}
+          <td class="num" style="font-size:11px">${fmt(pc._total, pc._currency)}<span style="font-size:10px;color:var(--t3);margin-left:4px">${pc._month || ''}</span></td>
+        </tr>`
+      ).join('');
+      row += projRows;
+    } else if (hasProjIds) {
+      // 비용 없이 프로젝트 ID만 표시
+      const projRows = info.project_ids.slice().sort().map(pid =>
+        `<tr id="${rowId}" style="display:none;background:#f8f9fa">
+          <td colspan="${colSpan}" style="padding-left:28px;font-size:11px;color:var(--t2);font-family:monospace">${pid}</td>
+        </tr>`
+      ).join('');
+      row += projRows;
+    }
+
+    return row;
+  }).join('');
+}
+
+function toggleBillingProjects(rowId) {
+  document.querySelectorAll(`#${rowId}`).forEach(r => {
+    r.style.display = r.style.display === 'none' ? '' : 'none';
+  });
+}
+
+async function saveBillingSettings() {
+  const bq_project = document.getElementById('bq-project-input').value.trim();
+  const bq_dataset = document.getElementById('bq-dataset-input').value.trim();
+  try {
+    await fetch('/api/gcp/billing/settings', {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({bq_project, bq_dataset})
+    });
+    document.getElementById('billing-settings-msg').textContent = '✓ 설정 저장됨';
+    setTimeout(() => document.getElementById('billing-settings-msg').textContent = '', 2000);
+  } catch(e) {
+    document.getElementById('billing-settings-msg').textContent = '저장 실패: ' + e;
+  }
+}
+
+async function startBillingScan() {
+  document.getElementById('gcp-billing-scan-progress').style.display = 'flex';
+  document.getElementById('gcp-billing-status-text').textContent = '스캔 중...';
+  document.getElementById('billing-settings-msg').textContent = '스캔 시작...';
+  await fetch('/api/gcp/billing/scan', {method: 'POST', credentials: 'same-origin'});
+  listenSSE('/api/gcp/billing/stream',
+    (pct, stage) => {
+      document.getElementById('gcp-billing-progress-bar').style.width = pct + '%';
+      document.getElementById('gcp-billing-progress-text').textContent = stage;
+    },
+    async () => {
+      document.getElementById('gcp-billing-scan-progress').style.display = 'none';
+      document.getElementById('billing-settings-msg').textContent = '✓ 스캔 완료';
+      document.getElementById('gcp-billing-status-text').textContent = '✓ 스캔 완료 — 결과 로딩 중...';
+      await loadGcpBilling();
+    },
+    (msg) => {
+      document.getElementById('gcp-billing-progress-text').textContent = '오류: ' + msg;
+      document.getElementById('billing-settings-msg').textContent = '오류: ' + msg;
+    }
+  );
+}
+
+// ── AWS 계정 ──────────────────────────────────────────────────────────
+// ── AWS 프론트 캐시 + 백그라운드 업데이트 ───────────────────────────
+const _awsFrontCache = { accounts: null, costs: null, orgTree: null, orgOus: null };
+// 각 키별 진행 중인 fetch Promise (중복 요청 방지)
+const _awsFetching = { accounts: null, costs: null, orgTree: null, orgOus: null };
+
+/**
+ * 캐시가 있으면 즉시 렌더 후 백그라운드에서 갱신.
+ * 이미 갱신 중이면 추가 요청 없이 완료 시 렌더만 붙임.
+ */
+async function _awsLoad(key, fetchFn, renderFn) {
+  // 1) 캐시 있으면 즉시 표시
+  if (_awsFrontCache[key]) renderFn(_awsFrontCache[key]);
+
+  // 2) 이미 fetch 중이면 그 Promise에 attach
+  if (_awsFetching[key]) {
+    _awsFetching[key].then(data => { if (data) renderFn(data); });
+    return;
+  }
+
+  // 3) 새로 fetch
+  const p = fetchFn().then(data => {
+    _awsFrontCache[key] = data;
+    renderFn(data);
+    _awsFetching[key] = null;
+    return data;
+  }).catch(() => { _awsFetching[key] = null; });
+  _awsFetching[key] = p;
+}
+
+async function _awsForceRefresh(key, fetchFn, renderFn) {
+  // 진행 중 fetch 있으면 완료 대기 후 재실행 방지
+  if (_awsFetching[key]) return;
+  _awsFrontCache[key] = null;
+  await _awsLoad(key, fetchFn, renderFn);
+}
+
+async function loadAwsAccounts(forceRefresh = false) {
+  // 캐시 없을 때만 로딩 표시
+  if (!_awsFrontCache.accounts && !_awsFetching.accounts) {
+    document.getElementById('aws-accounts-tbody').innerHTML =
+      '<tr><td colspan="6" class="loading">⏳ 수집 중... (첫 로딩 10~20초)</td></tr>';
+  }
+
+  if (forceRefresh) {
+    await _awsForceRefresh('accounts', _fetchAccounts, data => {
+      _renderAwsAccounts(data, _awsFrontCache.costs);
+      _setCacheTag('aws-acc-cache-tag', data._ts);
+    });
+    // 비용도 강제 갱신
+    await _awsForceRefresh('costs', _fetchCosts, () => {
+      _renderAwsAccounts(_awsFrontCache.accounts, _awsFrontCache.costs);
+    });
+  } else {
+    await _awsLoad('accounts', _fetchAccounts, data => {
+      _renderAwsAccounts(data, _awsFrontCache.costs);
+      _setCacheTag('aws-acc-cache-tag', data._ts);
+    });
+    _awsLoad('costs', _fetchCosts, () => {
+      _renderAwsAccounts(_awsFrontCache.accounts, _awsFrontCache.costs);
+    });
+  }
+}
+
+async function _fetchAccounts() {
+  const d = await fetch('/api/aws/accounts').then(r => r.json());
+  d._ts = Date.now();
+  return d;
+}
+
+function _monthToRange(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const start = `${y}-${String(m).padStart(2,'0')}-01`;
+  const end   = m === 12 ? `${y+1}-01-01` : `${y}-${String(m+1).padStart(2,'0')}-01`;
+  return { start, end };
+}
+
+async function _fetchCosts(ym) {
+  const month = ym || _awsCostSelectedMonth || _recentMonths(1)[0];
+  const { start, end } = _monthToRange(month);
+  const d = await fetch(`/api/aws/costs/summary?start=${start}&end=${end}`)
+    .then(r => r.json()).catch(() => ({summary:[]}));
+  d._ts = Date.now();
+  d._month = month;
+  return d;
+}
+
+function _renderAwsAccounts(data, costsData) {
+  AWS_ACCOUNTS = data.accounts || [];
+  document.getElementById('aws-acc-count').textContent = `${AWS_ACCOUNTS.length}개`;
+  document.getElementById('aws-acc-subtitle').textContent = `${AWS_ACCOUNTS.length}개 멤버 계정`;
+
+  let costMap = {};
+  if (costsData) {
+    (costsData.summary || []).forEach(s => costMap[s.account_id] = s);
+    const total = (costsData.summary || []).reduce((s, a) => s + (a.cost || 0), 0);
+    document.getElementById('aws-acc-status').innerHTML =
+      `Organizations 계정 ${AWS_ACCOUNTS.length}개 · 이번달 총 비용 <strong style="color:var(--orange)">${fmtUsd(total)}</strong>`;
+  } else {
+    document.getElementById('aws-acc-status').textContent = `계정 ${AWS_ACCOUNTS.length}개`;
+  }
+
+  const sel = document.getElementById('aws-cost-account-filter');
+  if (sel) sel.innerHTML = '<option value="">전체 계정</option>' +
+    AWS_ACCOUNTS.map(a => `<option value="${a.id}">${a.name} (${a.id})</option>`).join('');
+
+  document.getElementById('aws-accounts-tbody').innerHTML = AWS_ACCOUNTS.map(a => {
+    const cost = costMap[a.id];
+    const costHtml = cost ? `<strong style="color:var(--orange)">${fmtUsd(cost.cost)}</strong>` : '-';
+    return `<tr>
+      <td style="font-family:monospace;font-size:11px;color:var(--t2)">${a.id}</td>
+      <td><strong>${a.name}</strong></td>
+      <td style="font-size:11px;color:var(--t2)">${a.email || '-'}</td>
+      <td><span class="dot ${a.status==='ACTIVE'?'dot-green':'dot-red'}"></span>${a.status}</td>
+      <td class="num">${costHtml}</td>
+      <td><button class="btn-sm" onclick="loadAwsAccountResources('${a.id}','${a.name}')">리소스 조회</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function _setCacheTag(id, ts) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = ts ? `캐시 ${_timeAgo(ts)}` : '';
+}
+function _updateAwsCacheTag(id, ts) { _setCacheTag(id, ts); }
+function _timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return `${s}초 전`;
+  if (s < 3600) return `${Math.floor(s/60)}분 전`;
+  return `${Math.floor(s/3600)}시간 전`;
+}
+
+async function loadAwsAccountResources(account_id, name) {
+  const area = document.getElementById('aws-account-resources');
+  const content = document.getElementById('aws-res-content');
+  area.style.display = 'block';
+  document.getElementById('aws-res-title').textContent = `${name} (${account_id}) 리소스`;
+  content.innerHTML = '<div class="loading">로딩 중...</div>';
+  try {
+    const data = await fetch(`/api/aws/resources/${account_id}`).then(r => r.json());
+    if (data.error) {
+      content.innerHTML = `<div style="color:var(--red);padding:16px">${data.error}</div>`;
+      return;
+    }
+    const summary = data.summary || {};
+    const resources = data.resources || [];
+    content.innerHTML = `
+      <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+        <div class="stats-row" style="margin-bottom:0">
+          ${Object.entries(summary).map(([k,v]) => `<div class="stat-item"><div class="stat-num">${v}</div><div class="stat-label">${k}</div></div>`).join('')}
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <tr><th>타입</th><th>이름</th><th>상태</th><th>리전</th><th>ID</th></tr>
+          ${resources.slice(0, 100).map(r => `<tr>
+            <td><span class="tag tag-infra">${r.type}</span></td>
+            <td>${r.name || '-'}</td>
+            <td>${r.state || r.status || '-'}</td>
+            <td>${r.region || '-'}</td>
+            <td style="font-family:monospace;font-size:10px;color:var(--t3)">${r.id || '-'}</td>
+          </tr>`).join('')}
+          ${resources.length > 100 ? `<tr><td colspan="5" style="text-align:center;color:var(--t2);font-size:11px">외 ${resources.length - 100}개</td></tr>` : ''}
+        </table>
+      </div>`;
+  } catch(e) {
+    content.innerHTML = `<div style="color:var(--red);padding:16px">${e.message}</div>`;
+  }
+}
+
+// ── AWS CMDB ──────────────────────────────────────────────────────────
+// CMDB 상세 데이터 캐시: { account_id: {EC2:[...], S3:[...], ...} }
+const _cmdbDetailCache = {};
+
+async function loadAwsCmdb() {
+  try {
+    const data = await fetch('/api/aws/cmdb/summary').then(r => r.json());
+    AWS_CMDB_DATA = data.summary || [];
+    const totals = {ec2:0, s3:0, rds:0, ecs:0, eks:0, subnet:0};
+    AWS_CMDB_DATA.forEach(a => {
+      totals.ec2 += a.ec2||0; totals.s3 += a.s3||0; totals.rds += a.rds||0;
+      totals.ecs += a.ecs||0; totals.eks += a.eks||0; totals.subnet += a.subnet||0;
+    });
+    document.getElementById('aws-cmdb-status-text').textContent =
+      `EC2 ${totals.ec2} · S3 ${totals.s3} · RDS ${totals.rds} · ECS ${totals.ecs} · EKS ${totals.eks} · Subnet ${totals.subnet}`;
+    document.getElementById('aws-cmdb-subtitle').textContent =
+      `${AWS_CMDB_DATA.length}개 계정`;
+
+    // 상세 데이터 전체 로드 → 완료 후 타입별 계정 필터 자동 갱신
+    await loadCmdbDetails();
+    renderAwsCmdbTable();
+  } catch(e) {
+    document.getElementById('aws-cmdb-status-text').textContent = '로드 실패: ' + e.message;
+  }
+}
+
+async function loadCmdbDetails(forceRefresh = false) {
+  // 모든 계정 상세를 병렬로 fetch
+  const accounts = AWS_CMDB_DATA;
+  if (!accounts.length) return;
+
+  // 캐시에 없는 계정만 fetch
+  const missing = accounts.filter(a => forceRefresh || !_cmdbDetailCache[a.account_id]);
+  if (!missing.length) return;
+
+  document.getElementById('aws-cmdb-status-text').textContent += ' — 상세 로딩 중...';
+
+  const results = await Promise.allSettled(
+    missing.map(a =>
+      fetch(`/api/aws/cmdb/account/${a.account_id}`).then(r => r.json())
+        .then(d => ({ account_id: a.account_id, data: d }))
+        .catch(() => ({ account_id: a.account_id, data: null }))
+    )
+  );
+
+  results.forEach(r => {
+    if (r.status === 'fulfilled' && r.value.data) {
+      _cmdbDetailCache[r.value.account_id] = r.value.data;
+    }
+  });
+
+  // 요약 텍스트 복원
+  const totals = {ec2:0, s3:0, rds:0, ecs:0, eks:0, subnet:0};
+  AWS_CMDB_DATA.forEach(a => {
+    totals.ec2 += a.ec2||0; totals.s3 += a.s3||0; totals.rds += a.rds||0;
+    totals.ecs += a.ecs||0; totals.eks += a.eks||0; totals.subnet += a.subnet||0;
+  });
+  document.getElementById('aws-cmdb-status-text').textContent =
+    `EC2 ${totals.ec2} · S3 ${totals.s3} · RDS ${totals.rds} · ECS ${totals.ecs} · EKS ${totals.eks} · Subnet ${totals.subnet}`;
+  // 상세 로드 완료 → 현재 타입 기준 계정 필터 갱신
+  _updateAwsAccountFilter(_awsCmdbType);
+  renderAwsCmdbTable();
+}
+
+function switchAwsCmdbType(type) {
+  _awsCmdbType = type;
+  document.querySelectorAll('.aws-cmdb-type-btn').forEach(b => b.classList.remove('active-gcmdb'));
+  document.querySelectorAll(`.aws-cmdb-type-btn[data-type="${type}"]`).forEach(b => b.classList.add('active-gcmdb'));
+  _awsAccFilter = '';  // 타입 전환 시 계정 필터 초기화
+  // VPC 탭 진입 시 수집 버튼 표시 / 데이터 로드
+  const vpcBtn = document.getElementById('aws-vpc-cache-btn');
+  if (vpcBtn) vpcBtn.style.display = (type === 'VPC') ? '' : 'none';
+  if (type === 'VPC') { loadAwsVpcFlat(); return; }
+  renderAwsCmdbTable();
+}
+
+function _updateAwsAccountFilter(type) {
+  // 테이블 헤더 내 드롭다운 갱신
+  _refreshAccTh(type);
+}
+
+function _refreshAccTh(type) {
+  const th = document.getElementById('aws-acc-th');
+  if (!th) return;
+  const typeKeyMap = {EC2:'ec2', S3:'s3', RDS:'rds', ECS:'ecs', EKS:'eks', SUBNET:'subnet'};
+  const key = typeKeyMap[type] || type.toLowerCase();
+
+  const filtered = AWS_CMDB_DATA.filter(a => {
+    const detail = _cmdbDetailCache[a.account_id] || {};
+    const items = detail[type] || detail[type.toUpperCase()] || [];
+    return Array.isArray(items) ? items.length > 0 : (a[key] || 0) > 0;
+  });
+
+  const opts = '<option value="">전체 계정</option>' +
+    filtered.map(a => `<option value="${a.account_id}"${a.account_id === _awsAccFilter ? ' selected' : ''}>${a.account_name || a.account_id}</option>`).join('');
+
+  th.innerHTML = `<select onclick="event.stopPropagation()" onchange="_awsAccFilter=this.value;renderAwsCmdbTable()"
+    style="font-size:11px;font-weight:600;border:none;border-bottom:2px solid #dadce0;border-radius:0;padding:2px 4px;background:transparent;cursor:pointer;color:#3c4043;outline:none;max-width:160px">
+    ${opts}
+  </select>`;
+}
+
+function renderAwsCmdbTable() {
+  const type = _awsCmdbType;
+  const accFilter = _awsAccFilter;
+  const search = (document.getElementById('aws-cmdb-search').value || '').toLowerCase();
+
+  const typeKeyMap = {EC2: 'ec2', S3: 's3', RDS: 'rds', ECS: 'ecs', EKS: 'eks', SUBNET: 'subnet'};
+  const key = typeKeyMap[type] || type.toLowerCase();
+
+  const typeLabels = {EC2: 'EC2 인스턴스', S3: 'S3 버킷', RDS: 'RDS 인스턴스', ECS: 'ECS 서비스', EKS: 'EKS 클러스터', SUBNET: '서브넷'};
+  document.getElementById('aws-cmdb-table-title').textContent = typeLabels[type] || type;
+
+  let rows = [];
+  AWS_CMDB_DATA
+    .filter(a => !accFilter || a.account_id === accFilter)
+    .forEach(a => {
+      // summary 데이터가 아닌 상세 캐시에서 가져옴
+      const detail = _cmdbDetailCache[a.account_id] || {};
+      const items = detail[type] || detail[type.toUpperCase()] || [];
+      if (Array.isArray(items)) {
+        items.forEach(item => {
+          if (!search || JSON.stringify(item).toLowerCase().includes(search)) {
+            rows.push({...item, _account: a.account_name || a.account_id, _account_id: a.account_id});
+          }
+        });
+      }
+    });
+
+  document.getElementById('aws-cmdb-count').textContent = `${rows.length}개`;
+
+  const thead = document.getElementById('aws-cmdb-thead');
+  const tbody = document.getElementById('aws-cmdb-tbody');
+
+  const noData = (n) => `<tr><td colspan="${n}" style="text-align:center;color:var(--t2);padding:32px">데이터 없음</td></tr>`;
+  const dot = (state) => `<span class="dot ${(state||'').toLowerCase().includes('running')||(state||'').toLowerCase().includes('available')?'dot-green':'dot-red'}"></span>`;
+  const tag = (name) => `<span class="tag tag-infra" style="font-size:10px">${name}</span>`;
+
+  if (type === 'EC2') {
+    thead.innerHTML = `<tr><th id="aws-acc-th">계정</th><th>이름</th><th>인스턴스ID</th><th>타입</th><th>상태</th><th>리전</th><th>담당자</th>${USER_ROLE==='admin'?'<th>Private IP</th>':''}</tr>`;
+    tbody.innerHTML = rows.map(r => {
+      const privateIp = (r.nic && r.nic[0] && r.nic[0].private_ip && r.nic[0].private_ip[0]) || '-';
+      return `<tr>
+        <td>${tag(r._account)}</td>
+        <td><strong>${r.name || '-'}</strong></td>
+        <td style="font-family:monospace;font-size:11px;color:var(--t2)">${r.server_id || '-'}</td>
+        <td style="font-family:monospace;font-size:11px">${r.type || '-'}</td>
+        <td>${dot(r.state)}${r.state || '-'}</td>
+        <td>${r.region || '-'}</td>
+        <td style="font-size:11px">${r.user || r.team || '-'}</td>
+        ${USER_ROLE==='admin'?`<td style="font-family:monospace;font-size:11px">${privateIp}</td>`:''}
+      </tr>`;
+    }).join('') || noData(USER_ROLE==='admin'?8:7);
+
+  } else if (type === 'RDS') {
+    thead.innerHTML = '<tr><th id="aws-acc-th">계정</th><th>인스턴스명</th><th>엔진</th><th>버전</th><th>티어</th><th>상태</th><th>리전</th><th>엔드포인트</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._account)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td>${r.Engine || r.engine || '-'}</td>
+      <td style="font-size:11px">${r.EngineVersion || r.engine_version || '-'}</td>
+      <td style="font-family:monospace;font-size:11px">${r.flavor || r.instance_class || '-'}</td>
+      <td>${dot(r.status)}${r.status || '-'}</td>
+      <td>${r.Region || r.region || '-'}</td>
+      <td style="font-size:11px;color:var(--t2)">${r.endpoint || '-'}</td>
+    </tr>`).join('') || noData(8);
+
+  } else if (type === 'S3') {
+    thead.innerHTML = '<tr><th id="aws-acc-th">계정</th><th>버킷명</th><th>리전</th><th>등록일</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._account)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td>${r.region || '-'}</td>
+      <td style="font-size:11px;color:var(--t2)">${(r.registered_at||'').slice(0,10) || '-'}</td>
+    </tr>`).join('') || noData(4);
+
+  } else if (type === 'EKS') {
+    thead.innerHTML = '<tr><th id="aws-acc-th">계정</th><th>클러스터명</th><th>버전</th><th>상태</th><th>리전</th><th>VPC</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._account)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td>${r.version || '-'}</td>
+      <td>${dot(r.status)}${r.status || '-'}</td>
+      <td>${r.region || '-'}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--t2)">${r.vpc_id || '-'}</td>
+    </tr>`).join('') || noData(6);
+
+  } else if (type === 'ECS') {
+    thead.innerHTML = '<tr><th id="aws-acc-th">계정</th><th>클러스터명</th><th>상태</th><th>실행 태스크</th><th>리전</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._account)}</td>
+      <td><strong>${r.name || '-'}</strong></td>
+      <td>${dot(r.status)}${r.status || '-'}</td>
+      <td class="num">${r.running_task ?? '-'}</td>
+      <td>${r.region || '-'}</td>
+    </tr>`).join('') || noData(5);
+
+  } else if (type === 'SUBNET') {
+    thead.innerHTML = '<tr><th id="aws-acc-th">계정</th><th>서브넷 ID</th><th>VPC</th><th>CIDR</th><th>AZ</th><th>상태</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._account)}</td>
+      <td style="font-family:monospace;font-size:11px">${r.subnet_id || '-'}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--t2)">${r.vpc_id || '-'}</td>
+      <td style="font-family:monospace;font-size:11px">${r.cidr || '-'}</td>
+      <td style="font-size:11px">${r.az || '-'}</td>
+      <td>${dot(r.state)}${r.state || '-'}</td>
+    </tr>`).join('') || noData(6);
+
+  } else {
+    thead.innerHTML = '<tr><th id="aws-acc-th">계정</th><th>이름/ID</th></tr>';
+    tbody.innerHTML = rows.map(r => `<tr>
+      <td>${tag(r._account)}</td>
+      <td>${r.name || r.id || r.subnet_id || '-'}</td>
+    </tr>`).join('') || noData(2);
+  }
+
+  // 계정 컬럼 헤더 드롭다운 갱신 (thead 재생성 후 호출)
+  _refreshAccTh(type);
+}
+
+// ── AWS VPC ────────────────────────────────────────────────────────────
+const _awsVpcCache = {};   // {account_id: [items]}
+let _awsVpcBuiltAt = null;
+
+async function loadAwsVpcFlat() {
+  const thead = document.getElementById('aws-cmdb-thead');
+  const tbody = document.getElementById('aws-cmdb-tbody');
+  const countEl = document.getElementById('aws-cmdb-count');
+  const titleEl = document.getElementById('aws-cmdb-table-title');
+  if (titleEl) titleEl.textContent = 'VPC';
+
+  // 캐시 있으면 바로 렌더
+  if (Object.keys(_awsVpcCache).length > 0) { renderAwsVpcTable(); return; }
+
+  // 백엔드 캐시 조회
+  try {
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">⏳ VPC 데이터 조회 중...</td></tr>';
+    const data = await fetch('/api/aws/vpc/list').then(r => r.json());
+    const items = data.items || [];
+    if (items.length > 0) {
+      items.forEach(item => {
+        const aid = item._account;
+        if (!_awsVpcCache[aid]) _awsVpcCache[aid] = [];
+        _awsVpcCache[aid].push(item);
+      });
+      _awsVpcBuiltAt = data.built_at;
+      renderAwsVpcTable();
+      return;
+    }
+  } catch(e) {}
+
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--t2);padding:32px">VPC 데이터 없음 — 🔄 VPC 수집 버튼을 눌러 수집하세요</td></tr>';
+  if (countEl) countEl.textContent = '0개';
+}
+
+function renderAwsVpcTable() {
+  const thead = document.getElementById('aws-cmdb-thead');
+  const tbody = document.getElementById('aws-cmdb-tbody');
+  const countEl = document.getElementById('aws-cmdb-count');
+  const search = (document.getElementById('aws-cmdb-search').value || '').toLowerCase();
+
+  // flat list
+  let all = [];
+  Object.entries(_awsVpcCache).forEach(([aid, items]) =>
+    items.forEach(item => all.push({...item, _account: aid}))
+  );
+
+  // 계정 필터
+  if (_awsAccFilter) all = all.filter(r => r._account === _awsAccFilter);
+  // 검색
+  if (search) all = all.filter(r => JSON.stringify(r).toLowerCase().includes(search));
+
+  if (countEl) countEl.textContent = `${all.length}개`;
+
+  const tag = aid => {
+    const acc = AWS_CMDB_DATA.find(a => a.account_id === aid);
+    const label = acc ? (acc.account_name || aid) : aid;
+    return `<span class="tag tag-aws-account" title="${aid}">${label}</span>`;
+  };
+  const dot = s => `<span class="dot ${s==='available'?'dot-green':'dot-red'}"></span>`;
+  const yn = v => v ? '<span style="color:#1a73e8">✓</span>' : '-';
+
+  thead.innerHTML = '<tr><th id="aws-acc-th">계정</th><th>VPC ID</th><th>이름</th><th>CIDR</th><th>기본VPC</th><th>상태</th><th>리전</th></tr>';
+  tbody.innerHTML = all.map(r => `<tr>
+    <td>${tag(r._account)}</td>
+    <td style="font-family:monospace;font-size:11px">${r.id || '-'}</td>
+    <td><strong>${r.name || '-'}</strong></td>
+    <td style="font-family:monospace;font-size:11px">${r.cidr || '-'}</td>
+    <td style="text-align:center">${yn(r.is_default)}</td>
+    <td>${dot(r.state)}${r.state || '-'}</td>
+    <td style="font-size:11px;color:var(--t2)">${r.region || '-'}</td>
+  </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--t2);padding:32px">데이터 없음</td></tr>';
+
+  // 계정 헤더 드롭다운 — VPC 캐시 기준으로 직접 구성
+  const th = document.getElementById('aws-acc-th');
+  if (th) {
+    const accIds = [...new Set(Object.keys(_awsVpcCache).filter(aid => (_awsVpcCache[aid]||[]).length > 0))];
+    const opts = '<option value="">전체 계정</option>' +
+      accIds.map(aid => {
+        const acc = AWS_CMDB_DATA.find(a => a.account_id === aid);
+        const label = acc ? (acc.account_name || aid) : aid;
+        return `<option value="${aid}"${aid === _awsAccFilter ? ' selected' : ''}>${label}</option>`;
+      }).join('');
+    th.innerHTML = `<select onclick="event.stopPropagation()" onchange="_awsAccFilter=this.value;renderAwsVpcTable()"
+      style="font-size:11px;font-weight:600;border:none;border-bottom:2px solid #dadce0;border-radius:0;padding:2px 4px;background:transparent;cursor:pointer;color:#3c4043;outline:none;max-width:160px">
+      ${opts}</select>`;
+  }
+}
+
+async function buildAwsVpcCache() {
+  if (USER_ROLE !== 'admin') { alert('관리자 로그인이 필요합니다'); return; }
+  const btn = document.getElementById('aws-vpc-cache-btn');
+  const bar = document.getElementById('aws-vpc-build-bar');
+  const prog = document.getElementById('aws-vpc-build-prog');
+  const stage = document.getElementById('aws-vpc-build-stage');
+  const pct = document.getElementById('aws-vpc-build-pct');
+
+  btn.disabled = true; btn.textContent = '⏳ 수집 중...';
+  bar.style.display = 'block';
+
+  // POST /api/aws/vpc/build → SSE 스트림으로 진행률 수신
+  try {
+    const resp = await fetch('/api/aws/vpc/build', {method:'POST', credentials:'same-origin'});
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, {stream: true});
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const msg = JSON.parse(line.slice(6));
+          if (msg.type === 'progress') {
+            prog.style.width = msg.pct + '%';
+            stage.textContent = `${msg.done}/${msg.total} 계정 수집 중... (${msg.account || ''})`;
+            pct.textContent = msg.pct + '%';
+          } else if (msg.type === 'done') {
+            prog.style.width = '100%'; pct.textContent = '100%';
+            stage.textContent = `수집 완료! (${msg.built_at || ''})`;
+            btn.disabled = false; btn.textContent = '🔄 VPC 수집';
+            Object.keys(_awsVpcCache).forEach(k => delete _awsVpcCache[k]);
+            setTimeout(() => { bar.style.display = 'none'; loadAwsVpcFlat(); }, 1500);
+          }
+        } catch(e) {}
+      }
+    }
+  } catch(e) {
+    stage.textContent = '오류: ' + e.message;
+  }
+  btn.disabled = false; btn.textContent = '🔄 VPC 수집';
+}
+
+async function collectAwsCmdb() {
+  if (USER_ROLE !== 'admin') { alert('관리자 로그인이 필요합니다'); return; }
+  const btn = document.getElementById('aws-cmdb-collect-btn');
+  btn.disabled = true;
+  const statusArea = document.getElementById('aws-cmdb-collect-status');
+  statusArea.style.display = 'flex';
+  document.getElementById('aws-cmdb-collect-text').textContent = '수집 명령 전송 중...';
+  try {
+    const res = await fetch('/api/aws/cmdb/collect', {method: 'POST', credentials: 'same-origin'}).then(r => r.json());
+    if (res.command_id) {
+      document.getElementById('aws-cmdb-collect-text').textContent = `명령 ID: ${res.command_id} — 폴링 중...`;
+      pollCmdbCollect(res.command_id, btn, statusArea);
+    }
+  } catch(e) {
+    document.getElementById('aws-cmdb-collect-text').textContent = '오류: ' + e.message;
+    btn.disabled = false;
+  }
+}
+
+async function pollCmdbCollect(commandId, btn, statusArea) {
+  let attempts = 0;
+  const timer = setInterval(async () => {
+    attempts++;
+    try {
+      const s = await fetch(`/api/aws/cmdb/collect/${commandId}`).then(r => r.json());
+      document.getElementById('aws-cmdb-collect-text').textContent = `상태: ${s.status} (${attempts * 5}s)`;
+      if (['Success', 'Failed', 'Cancelled', 'TimedOut'].includes(s.status)) {
+        clearInterval(timer);
+        btn.disabled = false;
+        statusArea.style.display = 'none';
+        if (s.status === 'Success') {
+          await refreshAwsCmdb();
+        } else {
+          alert('수집 실패: ' + (s.stderr || s.status));
+        }
+      }
+    } catch(e) {
+      if (attempts > 60) {
+        clearInterval(timer);
+        btn.disabled = false;
+        statusArea.style.display = 'none';
+      }
+    }
+  }, 5000);
+}
+
+async function refreshAwsCmdb() {
+  await fetch('/api/aws/cmdb/refresh', {method: 'POST', credentials: 'same-origin'});
+  // 상세 캐시도 초기화
+  Object.keys(_cmdbDetailCache).forEach(k => delete _cmdbDetailCache[k]);
+  await loadAwsCmdb();
+}
+
+// ── AWS 비용 ──────────────────────────────────────────────────────────
+// ── AWS 빌링 현황 ────────────────────────────────────────────────────
+let _awsCostSelectedMonth = '';   // 선택된 월 (YYYY-MM)
+let _awsCostDetailAccId   = '';   // 선택된 계정 ID
+const _awsDetailCache = {};       // {accId::YYYY-MM: period}
+const _awsCostByMonth  = {};      // {YYYY-MM: summaryData} 월별 캐시
+
+// 최근 6개월 목록 생성
+function _recentMonths(n = 6) {
+  const months = [];
+  const now = new Date();
+  for (let i = 0; i < n; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  return months;
+}
+
+// 월 탭 렌더
+function _renderMonthTabs() {
+  const months = _recentMonths(6);
+  if (!_awsCostSelectedMonth) _awsCostSelectedMonth = months[0];
+  const tabs = document.getElementById('aws-cost-month-tabs');
+  if (!tabs) return;
+  tabs.innerHTML = months.map(m => `
+    <button class="btn-sm ${m === _awsCostSelectedMonth ? 'active-month-tab' : ''}"
+            onclick="selectCostMonth('${m}')">${m}</button>
+  `).join('');
+}
+
+function selectCostMonth(ym) {
+  _awsCostSelectedMonth = ym;
+  _renderMonthTabs();
+  // 해당 월 캐시가 있으면 즉시 표시, 없으면 fetch
+  if (_awsCostByMonth[ym]) {
+    _renderCostSummary();
+  } else {
+    _loadCostForMonth(ym);
+  }
+  if (_awsCostDetailAccId) loadAwsCostDetailById(_awsCostDetailAccId, _awsCostDetailAccId);
+}
+
+async function _loadCostForMonth(ym, forceRefresh = false) {
+  if (!forceRefresh && _awsCostByMonth[ym]) {
+    _renderCostSummary();
+    return;
+  }
+  document.getElementById('aws-cost-summary-tbody').innerHTML =
+    `<tr><td colspan="4" class="loading">⏳ ${ym} 비용 수집 중...</td></tr>`;
+  const data = await _fetchCosts(ym);
+  _awsCostByMonth[ym] = data;
+  // 현재 선택 월과 일치할 때만 렌더
+  if (_awsCostSelectedMonth === ym) {
+    _renderCostSummary();
+    _setCacheTag('aws-cost-cache-tag', data._ts);
+  }
+}
+
+async function loadAwsCosts(forceRefresh = false) {
+  _renderMonthTabs();
+  const ym = _awsCostSelectedMonth;
+
+  if (forceRefresh) {
+    // 전체 월 캐시 초기화
+    Object.keys(_awsCostByMonth).forEach(k => delete _awsCostByMonth[k]);
+    Object.keys(_awsDetailCache).forEach(k => delete _awsDetailCache[k]);
+    _awsFrontCache.costs = null;
+    _awsFetching.costs   = null;
+  }
+
+  await _loadCostForMonth(ym, forceRefresh);
+}
+
+function _renderCostSummary() {
+  const ym   = _awsCostSelectedMonth;
+  const data = _awsCostByMonth[ym];
+  if (!data) return;
+  // 월 범위 계산 (해당 월 1일 ~ 다음 달 1일)
+  const [y, m] = ym.split('-').map(Number);
+  const startStr = `${y}-${String(m).padStart(2,'0')}-01`;
+  const nextM = m === 12 ? `${y+1}-01-01` : `${y}-${String(m+1).padStart(2,'0')}-01`;
+
+  const summary = data.summary || [];
+  const maxCost = summary.length ? Math.max(...summary.map(a => a.cost || 0)) : 1;
+  const total = summary.reduce((s, a) => s + (a.cost || 0), 0);
+
+  document.getElementById('aws-cost-total-badge').textContent = `${ym} 총 ${fmtUsd(total)}`;
+
+  const sel = document.getElementById('aws-cost-account-filter');
+  sel.innerHTML = '<option value="">전체 계정</option>' +
+    summary.map(a => `<option value="${a.account_id}">${a.name || a.account_id}</option>`).join('');
+
+  document.getElementById('aws-cost-summary-tbody').innerHTML = summary.length
+    ? summary.map(a => {
+        const pct = maxCost ? Math.round(((a.cost||0) / maxCost) * 100) : 0;
+        const sp  = a.sp_fee > 0
+          ? `<span style="color:var(--yel);font-size:11px">${fmtUsd(a.sp_fee)}</span>`
+          : '<span style="color:var(--t3)">-</span>';
+        return `<tr style="cursor:pointer" onclick="loadAwsCostDetailById('${a.account_id}','${a.name||a.account_id}')">
+          <td>${a.name || a.account_id}</td>
+          <td class="num"><strong>${fmtUsd(a.cost||0)}</strong></td>
+          <td class="num">${sp}</td>
+          <td><div class="cost-bar-wrap"><div class="cost-bar-bg"><div class="cost-bar-fill" style="width:${pct}%"></div></div></div></td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="4" style="color:var(--t2);text-align:center;padding:24px">데이터 없음</td></tr>';
+}
+
+async function loadAwsCostDetail() {
+  const sel = document.getElementById('aws-cost-account-filter');
+  const accId = sel.value;
+  if (!accId) { document.getElementById('aws-cost-detail-tbody').innerHTML = '<tr><td colspan="2" style="color:var(--t2);padding:32px;text-align:center">계정을 선택하세요</td></tr>'; return; }
+  await loadAwsCostDetailById(accId, sel.options[sel.selectedIndex].text);
+}
+
+async function loadAwsCostDetailById(accId, name) {
+  _awsCostDetailAccId = accId;
+  const ym = _awsCostSelectedMonth;
+  const [y, m] = ym.split('-').map(Number);
+  const startStr = `${y}-${String(m).padStart(2,'0')}-01`;
+  const endStr   = m === 12 ? `${y+1}-01-01` : `${y}-${String(m+1).padStart(2,'0')}-01`;
+
+  document.getElementById('aws-cost-detail-title').textContent = `${name}`;
+  document.getElementById('aws-cost-detail-month').textContent = ym;
+
+  // 캐시 키: accId + ym
+  const cacheKey = `${accId}::${ym}`;
+  if (_awsDetailCache[cacheKey]) {
+    _renderCostDetail(_awsDetailCache[cacheKey]);
+    return;
+  }
+
+  document.getElementById('aws-cost-detail-tbody').innerHTML = '<tr><td colspan="2" class="loading">로딩 중...</td></tr>';
+  try {
+    const data = await fetch(`/api/aws/costs/${accId}?start=${startStr}&end=${endStr}`).then(r => r.json());
+    const periods = data.periods || [];
+    // 해당 월 period 찾기
+    const period = periods.find(p => (p.start||'').startsWith(ym.slice(0,7))) || periods[periods.length-1];
+    _awsDetailCache[cacheKey] = period;
+    _renderCostDetail(period);
+  } catch(e) {
+    document.getElementById('aws-cost-detail-tbody').innerHTML =
+      `<tr><td colspan="2" style="color:var(--red);padding:16px">${e.message}</td></tr>`;
+  }
+}
+
+function _renderCostDetail(period) {
+  if (!period) {
+    document.getElementById('aws-cost-detail-tbody').innerHTML =
+      '<tr><td colspan="2" style="color:var(--t2);text-align:center;padding:32px">데이터 없음</td></tr>';
+    return;
+  }
+  const rows = (period.services || []).map(s =>
+    `<tr><td>${s.service}</td><td class="num">${fmtUsd(s.cost)}</td></tr>`
+  ).join('');
+  document.getElementById('aws-cost-detail-tbody').innerHTML =
+    rows || '<tr><td colspan="2" style="color:var(--t2);text-align:center;padding:16px">서비스 없음</td></tr>';
+}
+
+// ── AWS 조직 ──────────────────────────────────────────────────────────
+async function loadAwsOrg(forceRefresh = false) {
+  if (!_awsFrontCache.orgTree && !_awsFetching.orgTree) {
+    document.getElementById('aws-org-tree-area').innerHTML =
+      '<div class="loading">⏳ 조직 트리 수집 중... (10~30초 소요)</div>';
+  }
+
+  const treeFetch = () => fetch('/api/aws/org/tree').then(r => r.json()).then(d => { d._ts = Date.now(); return d; });
+  const ousFetch  = () => fetch('/api/aws/org/ous').then(r => r.json()).then(d => { d._ts = Date.now(); return d; });
+
+  if (forceRefresh) {
+    _awsFrontCache.orgTree = null;
+    _awsFrontCache.orgOus  = null;
+    _awsFetching.orgTree   = null;
+    _awsFetching.orgOus    = null;
+  }
+
+  // orgTree / orgOus / accounts 병렬 수집
+  // orgTree → 트리 렌더
+  const treeP = new Promise(resolve => {
+    _awsLoad('orgTree', treeFetch, data => {
+      if (data.error) {
+        document.getElementById('aws-org-tree-area').innerHTML =
+          `<div style="color:var(--red);padding:16px">${data.error}</div>`;
+      } else {
+        _renderOrgTree(data);
+        _setCacheTag('aws-org-cache-tag', data._ts);
+      }
+      resolve();
+    });
+    // 캐시 없을 때 _awsLoad가 renderFn을 즉시 호출 안 할 수 있으니 Promise도 감시
+    if (_awsFrontCache.orgTree) resolve();
+  });
+
+  // orgOus + accounts → 준비되는 즉시 이동 폼 렌더
+  const ousP  = new Promise(resolve => {
+    _awsLoad('orgOus', ousFetch, () => resolve());
+    if (_awsFrontCache.orgOus) resolve();
+  });
+  const accP  = new Promise(resolve => {
+    if (_awsFrontCache.accounts) { resolve(); return; }
+    _awsLoad('accounts', _fetchAccounts, () => resolve());
+  });
+
+  // OU + 계정 데이터 오면 즉시 폼 렌더 (트리보다 먼저 올 수 있음)
+  Promise.all([ousP, accP]).then(() => _renderOrgMoveArea());
+
+  // 트리까지 전부 완료 대기
+  await Promise.all([treeP, ousP, accP]);
+}
+
+function _renderOrgTree(tree) {
+  const total = countOrgAccounts(tree);
+  document.getElementById('aws-org-count').textContent = `${total}개 계정`;
+  document.getElementById('aws-org-tree-area').innerHTML = renderOuNode(tree, true);
+}
+
+async function _renderOrgMoveArea() {
+  const moveArea = document.getElementById('aws-org-move-area');
+  if (USER_ROLE !== 'admin') {
+    moveArea.innerHTML = '<div class="alert">🔒 계정 이동은 관리자 로그인 후 이용 가능합니다.</div>';
+    return;
+  }
+
+  const accounts = _awsFrontCache.accounts?.accounts || [];
+  const ous      = _awsFrontCache.orgOus?.ous || [];
+
+  // 오늘 날짜 기본값
+  const today = new Date().toISOString().slice(0, 10);
+
+  moveArea.innerHTML = `
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;color:var(--t2);margin-bottom:4px">이동할 계정</div>
+      <select class="filter-select" style="width:100%;padding:8px" id="org-move-account" onchange="_onMoveAccountChange()">
+        <option value="">계정 선택...</option>
+        ${accounts.map(a => `<option value="${a.id}" data-name="${a.name}">${a.name} (${a.id})</option>`).join('')}
+      </select>
+    </div>
+    <div style="margin-bottom:10px" id="org-move-current-wrap" style="display:none">
+      <div style="font-size:11px;color:var(--t2);margin-bottom:2px">현재 소속 OU</div>
+      <div id="org-move-current" style="font-size:12px;padding:6px 8px;background:#f8f9fa;border-radius:4px;color:#555">-</div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;color:var(--t2);margin-bottom:4px">이동할 대상 OU</div>
+      <select class="filter-select" style="width:100%;padding:8px" id="org-move-dest">
+        <option value="">대상 OU 선택...</option>
+        ${ous.map(o => `<option value="${o.id}">${o.path}</option>`).join('')}
+      </select>
+    </div>
+    <div style="border:1px solid #e8eaed;border-radius:6px;padding:10px;margin-bottom:14px;background:#fffbf0">
+      <div style="font-size:11px;font-weight:600;color:#f57c00;margin-bottom:8px">📅 임시 이동 (자동 복귀 설정)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div style="font-size:11px;color:var(--t2);margin-bottom:4px">복귀 날짜</div>
+          <input type="date" id="org-move-return-date" class="filter-select" style="width:100%;padding:6px"
+            min="${today}" placeholder="날짜 선택">
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--t2);margin-bottom:4px">복귀할 OU</div>
+          <select class="filter-select" style="width:100%;padding:6px" id="org-move-return-ou">
+            <option value="">원래 OU (자동)</option>
+            ${ous.map(o => `<option value="${o.id}">${o.path}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="font-size:10px;color:#999;margin-top:6px">※ 복귀 날짜 미설정 시 영구 이동</div>
+    </div>
+    <button class="btn-scan btn-scan-aws" style="width:100%" onclick="execOrgMove()">이동 실행</button>
+    <div id="org-move-msg" style="margin-top:8px;font-size:11px;color:var(--t2)"></div>
+  `;
+
+  _renderScheduledMoves();
+}
+
+async function _onMoveAccountChange() {
+  const sel = document.getElementById('org-move-account');
+  const accountId = sel.value;
+  const currentEl = document.getElementById('org-move-current');
+  const returnOuSel = document.getElementById('org-move-return-ou');
+  if (!accountId) { currentEl.textContent = '-'; return; }
+  try {
+    currentEl.textContent = '조회 중...';
+    const res = await fetch(`/api/aws/org/ous`).then(r => r.json());
+    const ous = res.ous || [];
+    // org tree에서 현재 계정 위치 찾기
+    const tree = _awsFrontCache.orgTree;
+    const currentOu = _findAccountOu(tree, accountId);
+    if (currentOu) {
+      currentEl.textContent = currentOu.path || currentOu.name || currentOu.id;
+      // 복귀 OU 기본값을 현재 OU로 설정
+      if (returnOuSel) {
+        for (let i = 0; i < returnOuSel.options.length; i++) {
+          if (returnOuSel.options[i].value === currentOu.id) {
+            returnOuSel.selectedIndex = i;
+            break;
+          }
+        }
+      }
+    } else {
+      currentEl.textContent = '확인 불가';
+    }
+  } catch(e) { currentEl.textContent = '오류'; }
+}
+
+function _findAccountOu(node, accountId, parentOu) {
+  if (!node) return null;
+  const accounts = node.accounts || [];
+  if (accounts.find(a => a.id === accountId)) {
+    return { id: node.id, name: node.name, path: node.path || node.name };
+  }
+  for (const child of (node.children || [])) {
+    const found = _findAccountOu(child, accountId, node);
+    if (found) return found;
+  }
+  return null;
+}
+
+// 전역 예약 맵 (account_id → move info) — OU 트리 렌더에서 뱃지 표시용
+let _scheduledMoveMap = {};
+
+async function _renderScheduledMoves() {
+  try {
+    const res = await fetch('/api/aws/org/scheduled-moves', {credentials:'same-origin'}).then(r=>r.json());
+    const moves = res.moves || [];
+
+    // 전역 맵 갱신
+    _scheduledMoveMap = {};
+    moves.forEach(m => { _scheduledMoveMap[m.account_id] = m; });
+
+    const ous = _awsFrontCache.orgOus?.ous || [];
+    const ouMap = {};
+    ous.forEach(o => ouMap[o.id] = o.path || o.name);
+    const accounts = _awsFrontCache.accounts?.accounts || [];
+    const accMap = {};
+    accounts.forEach(a => accMap[a.id] = a.name);
+
+    // ── 하단 전용 카드 ──
+    const card   = document.getElementById('org-schedule-card');
+    const panel  = document.getElementById('org-scheduled-panel');
+    const badge  = document.getElementById('org-schedule-count');
+
+    if (!moves.length) {
+      if (card) card.style.display = 'none';
+      // 트리 뱃지 재렌더
+      if (_awsFrontCache.orgTree) _renderOrgTree(_awsFrontCache.orgTree);
+      return;
+    }
+
+    if (badge) badge.textContent = `${moves.length}건`;
+    if (card)  card.style.display = 'block';
+
+    const today = new Date().toISOString().slice(0,10);
+    const tableHtml = `
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px">
+        <thead>
+          <tr style="background:#fff3e0;border-bottom:2px solid #ffe0b2">
+            <th style="padding:8px 12px;text-align:left;font-weight:600">계정명</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:600">계정 ID</th>
+            <th style="padding:8px 12px;text-align:left;font-weight:600">현재 OU → 복귀 OU</th>
+            <th style="padding:8px 12px;text-align:center;font-weight:600">복귀 날짜</th>
+            <th style="padding:8px 12px;text-align:center;font-weight:600">D-Day</th>
+            <th style="padding:8px 12px;text-align:center;font-weight:600">취소</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${moves.map(m => {
+            const ddays = Math.ceil((new Date(m.return_date) - new Date(today)) / 86400000);
+            const ddayTxt = ddays < 0 ? `<span style="color:#e53935">복귀처리중</span>`
+                          : ddays === 0 ? `<span style="color:#e53935;font-weight:700">오늘</span>`
+                          : `<span style="color:#f57c00;font-weight:600">D-${ddays}</span>`;
+            const destOuName = ouMap[m.dest_parent_id] || m.dest_parent_id || '-';
+            const retOuName  = ouMap[m.return_ou_id]   || m.return_ou_id   || '-';
+            return `
+            <tr style="border-bottom:1px solid #f0f2f5">
+              <td style="padding:8px 12px;font-weight:500">${accMap[m.account_id] || '-'}</td>
+              <td style="padding:8px 12px;font-family:monospace;font-size:11px;color:#666">${m.account_id}</td>
+              <td style="padding:8px 12px;font-size:11px;color:#555">
+                <span style="color:#1976d2">${destOuName}</span>
+                <span style="color:#999"> → </span>
+                <span style="color:#388e3c">${retOuName}</span>
+              </td>
+              <td style="padding:8px 12px;text-align:center;font-weight:600;color:#f57c00">${m.return_date}</td>
+              <td style="padding:8px 12px;text-align:center">${ddayTxt}</td>
+              <td style="padding:8px 12px;text-align:center">
+                <button onclick="cancelScheduledMove('${m.account_id}')"
+                  style="background:#fff;border:1px solid #ffcdd2;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:11px;color:#e53935">✕ 취소</button>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+
+    if (panel) panel.innerHTML = tableHtml;
+
+    // 트리 뱃지 재렌더
+    if (_awsFrontCache.orgTree) _renderOrgTree(_awsFrontCache.orgTree);
+  } catch(e) {}
+}
+
+async function cancelScheduledMove(accountId) {
+  if (!confirm('자동 복귀 예약을 취소하시겠습니까?')) return;
+  try {
+    await fetch(`/api/aws/org/scheduled-moves/${accountId}`, {method:'DELETE', credentials:'same-origin'});
+    _renderScheduledMoves();
+  } catch(e) { alert('오류: ' + e.message); }
+}
+
+function countOrgAccounts(node) {
+  let count = (node.accounts || []).length;
+  (node.children || []).forEach(c => count += countOrgAccounts(c));
+  return count;
+}
+
+function renderOuNode(node, isRoot) {
+  const icon = isRoot ? '🏢' : (node.type === 'ou' ? '📁' : '📂');
+  const accs = (node.accounts || []);
+  const children = (node.children || []);
+  const total = countOrgAccounts(node);
+  return `
+    <div class="${isRoot ? 'tree-root' : ''}">
+      <div class="tree-item">
+        <span>${icon}</span>
+        <span class="tree-name" style="${isRoot ? 'font-weight:700' : ''}">${node.name}</span>
+        <span class="tree-count">${total}</span>
+      </div>
+      <div class="${isRoot ? '' : 'tree-node'}">
+        ${children.map(c => renderOuNode(c, false)).join('')}
+        ${accs.map(a => {
+          const sched = _scheduledMoveMap && _scheduledMoveMap[a.id];
+          const badge = sched ? `<span style="margin-left:6px;background:#fff3e0;border:1px solid #ffcc80;border-radius:10px;padding:1px 6px;font-size:10px;color:#f57c00">⏰ ${sched.return_date} 복귀</span>` : '';
+          return `<div class="tree-item"><span>👤</span><span class="tree-name tree-account">${a.name} (${a.id})</span>${badge}</div>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+async function execOrgMove() {
+  const account_id = document.getElementById('org-move-account').value;
+  const dest_parent_id = document.getElementById('org-move-dest').value;
+  const return_date = document.getElementById('org-move-return-date')?.value || '';
+  const return_ou_id = document.getElementById('org-move-return-ou')?.value || '';
+  if (!account_id || !dest_parent_id) { alert('계정과 대상 OU를 선택하세요'); return; }
+
+  // 날짜만 있고 복귀 OU가 없으면 현재 OU를 복귀 OU로 사용
+  let finalReturnOuId = return_ou_id;
+  if (return_date && !finalReturnOuId) {
+    // 현재 소속 OU를 복귀 대상으로 자동 설정
+    const currentOu = _findAccountOu(_awsFrontCache.orgTree, account_id);
+    finalReturnOuId = currentOu?.id || '';
+  }
+
+  const accName = document.querySelector(`#org-move-account option[value="${account_id}"]`)?.dataset?.name || account_id;
+  const destName = document.querySelector(`#org-move-dest option[value="${dest_parent_id}"]`)?.textContent || dest_parent_id;
+  let confirmMsg = `[${accName}] 계정을\n→ ${destName} 으로 이동합니다.`;
+  if (return_date && finalReturnOuId) {
+    const returnName = document.querySelector(`#org-move-return-ou option[value="${finalReturnOuId}"]`)?.textContent || finalReturnOuId;
+    confirmMsg += `\n\n📅 ${return_date} 에 [${returnName}] 으로 자동 복귀 예약`;
+  }
+  if (!confirm(confirmMsg)) return;
+
+  const msgEl = document.getElementById('org-move-msg');
+  msgEl.textContent = '이동 중...';
+  try {
+    const payload = {account_id, dest_parent_id};
+    if (return_date && finalReturnOuId) {
+      payload.return_date = return_date;
+      payload.return_ou_id = finalReturnOuId;
+    }
+    const res = await fetch('/api/aws/org/move', {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    }).then(r => r.json());
+
+    if (res.ok) {
+      let msg = `✓ 이동 완료`;
+      if (res.scheduled_return) msg += ` | 📅 ${res.scheduled_return} 자동 복귀 예약됨`;
+      msgEl.style.color = '#1976d2';
+      msgEl.textContent = msg;
+      _awsFrontCache.orgTree = null;
+      _awsFrontCache.orgOus = null;
+      loadAwsOrg(true);
+      _renderScheduledMoves();
+    } else {
+      msgEl.style.color = '#e53935';
+      msgEl.textContent = '오류: ' + JSON.stringify(res);
+    }
+  } catch(e) {
+    msgEl.style.color = '#e53935';
+    msgEl.textContent = '오류: ' + e.message;
+  }
+}
+
+// ── 설정 ─────────────────────────────────────────────────────────────
+async function loadSettings() {
+  if (USER_ROLE !== 'admin') { switchTab('dashboard'); return; }
+
+  // 현재 인증 정보 조회
+  let creds = { aws: {}, gcp: {} };
+  try {
+    creds = await fetch('/api/admin/credentials', {credentials: 'same-origin'}).then(r => r.json());
+  } catch(e) {}
+
+  const gcpMode = creds.gcp.mode === 'service_account';
+  const awsMasked = creds.aws.key_id_masked || '미설정';
+  const gcpStatus = gcpMode
+    ? `<span style="color:var(--green)">✅ 서비스 계정</span><br><span style="font-size:11px;color:var(--t2)">${creds.gcp.sa_email}</span>`
+    : (creds.gcp.token_ok
+        ? `<span style="color:var(--green)">✅ gcloud 토큰</span><br><span style="font-size:11px;color:var(--t2)">${creds.gcp.gcloud_account}</span>`
+        : `<span style="color:var(--red)">❌ 인증 없음</span>`);
+
+  const el = document.getElementById('settings-content');
+  el.innerHTML = `
+
+  <!-- ══════════════════════════════════════════
+       AWS 인증
+  ══════════════════════════════════════════ -->
+  <div class="table-card" style="margin-bottom:16px">
+    <div class="table-header">
+      <span class="table-title">🔶 AWS 인증 정보</span>
+      <span style="font-size:11px;color:var(--t2)">현재: <b>${awsMasked}</b></span>
+    </div>
+    <div style="padding:18px">
+
+      <!-- 가이드 -->
+      <div class="guide-box" style="margin-bottom:18px">
+        <div class="guide-title">📋 Access Key 발급 방법</div>
+        <ol class="guide-steps">
+          <li>AWS Console → <b>IAM</b> 접속</li>
+          <li>좌측 메뉴 <b>사용자</b> → 해당 사용자 클릭</li>
+          <li><b>보안 자격 증명</b> 탭 → <b>액세스 키 만들기</b></li>
+          <li>사용 사례: <b>서비스 외부에서 실행되는 애플리케이션</b> 선택</li>
+          <li>생성된 <b>액세스 키 ID</b>와 <b>보안 액세스 키</b> 복사</li>
+        </ol>
+        <div class="guide-warn">⚠ 필요 권한: ReadOnlyAccess + OrganizationsReadOnlyAccess + CostExplorerReadOnlyAccess</div>
+      </div>
+
+      <!-- 입력 폼 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div class="settings-label">Access Key ID</div>
+          <input class="filter-input" style="width:100%;font-family:monospace" id="aws-key-id"
+                 placeholder="AKIA..." value="${creds.aws.key_id || ''}">
+        </div>
+        <div>
+          <div class="settings-label">Secret Access Key</div>
+          <input class="filter-input" style="width:100%;font-family:monospace" id="aws-secret"
+                 type="password" placeholder="••••••••">
+        </div>
+        <div>
+          <div class="settings-label">기본 리전</div>
+          <select class="filter-select" style="width:100%" id="aws-region">
+            <option value="ap-northeast-2" ${creds.aws.region==='ap-northeast-2'?'selected':''}>ap-northeast-2 (서울)</option>
+            <option value="ap-northeast-1" ${creds.aws.region==='ap-northeast-1'?'selected':''}>ap-northeast-1 (도쿄)</option>
+            <option value="us-east-1" ${creds.aws.region==='us-east-1'?'selected':''}>us-east-1 (버지니아)</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button class="btn-scan btn-scan-aws" style="width:100%;padding:9px" onclick="saveAwsCreds()">💾 저장 및 연결 테스트</button>
+        </div>
+        <div id="aws-creds-msg" style="grid-column:1/-1;font-size:12px;white-space:pre-line"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       GCP 인증
+  ══════════════════════════════════════════ -->
+  <div class="table-card" style="margin-bottom:16px">
+    <div class="table-header">
+      <span class="table-title">☁ GCP 인증 정보</span>
+      <span style="font-size:11px">${gcpStatus}</span>
+    </div>
+    <div style="padding:18px">
+
+      <!-- 인증 방식 탭 -->
+      <div style="display:flex;gap:4px;margin-bottom:18px;background:#f1f3f4;border-radius:8px;padding:3px;width:fit-content">
+        <button class="btn-sm" id="gcp-tab-sa"    onclick="gcpAuthTab('sa')"    style="background:#1a73e8;color:#fff">🔑 서비스 계정 JSON</button>
+        <button class="btn-sm" id="gcp-tab-token" onclick="gcpAuthTab('token')">🎟 Access Token</button>
+      </div>
+
+      <!-- ── 서비스 계정 JSON 패널 ── -->
+      <div id="gcp-panel-sa">
+        <!-- 가이드 -->
+        <div class="guide-box" style="margin-bottom:16px">
+          <div class="guide-title">📋 서비스 계정 JSON 키 발급 방법 <span class="guide-badge guide-badge-green">권장</span></div>
+          <ol class="guide-steps">
+            <li>GCP Console → <b>IAM 및 관리자</b> → <b>서비스 계정</b></li>
+            <li>기존 서비스 계정 선택 또는 <b>서비스 계정 만들기</b></li>
+            <li>서비스 계정에 다음 역할 부여:
+              <ul class="guide-sub">
+                <li><code>Viewer</code> (기본 조회)</li>
+                <li><code>Billing Account Viewer</code> (빌링 계정 조회)</li>
+                <li><code>Cloud Asset Viewer</code> (리소스 조회)</li>
+              </ul>
+            </li>
+            <li>서비스 계정 클릭 → <b>키</b> 탭 → <b>키 추가</b> → <b>새 키 만들기</b></li>
+            <li>키 유형 <b>JSON</b> 선택 → <b>만들기</b> → 파일 다운로드</li>
+            <li>다운로드된 JSON 파일 내용을 아래에 전체 붙여넣기</li>
+          </ol>
+          <div class="guide-warn">⚠ 서비스 계정 키는 영구 인증으로 관리에 주의가 필요합니다</div>
+        </div>
+        <div class="settings-label">서비스 계정 JSON 전체 내용 붙여넣기</div>
+        <textarea id="gcp-sa-json" class="filter-input"
+                  style="width:100%;height:130px;font-family:monospace;font-size:11px;resize:vertical;margin-top:4px"
+                  placeholder='{"type":"service_account","project_id":"my-project","private_key_id":"abc123","private_key":"-----BEGIN RSA PRIVATE KEY-----\n...","client_email":"my-sa@my-project.iam.gserviceaccount.com",...}'></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+          <button class="btn-scan btn-scan-gcp" onclick="saveGcpSA()">💾 저장 및 적용</button>
+          ${gcpMode ? `<button class="btn-sm btn-danger" onclick="deleteGcpSA()">🗑 키 삭제 (gcloud 토큰으로 전환)</button>` : ''}
+        </div>
+        <div id="gcp-sa-msg" style="margin-top:8px;font-size:12px;white-space:pre-line"></div>
+      </div>
+
+      <!-- ── Access Token 패널 ── -->
+      <div id="gcp-panel-token" style="display:none">
+        <!-- 가이드 -->
+        <div class="guide-box" style="margin-bottom:16px">
+          <div class="guide-title">📋 Access Token 발급 방법 <span class="guide-badge guide-badge-yellow">유효기간 1시간</span></div>
+          <ol class="guide-steps">
+            <li>로컬 PC 또는 EC2에 <b>gcloud CLI</b>가 설치되어 있어야 합니다</li>
+            <li>아직 로그인하지 않았다면:
+              <div class="guide-cmd">gcloud auth login</div>
+            </li>
+            <li>조직 계정으로 로그인 후 아래 명령어로 토큰 발급:
+              <div class="guide-cmd">gcloud auth print-access-token</div>
+            </li>
+            <li>출력된 토큰 전체를 복사해서 아래에 붙여넣기</li>
+          </ol>
+          <div class="guide-warn">⚠ 토큰 유효기간은 약 1시간입니다. 만료 시 재발급 필요</div>
+        </div>
+        <div class="settings-label">Access Token 붙여넣기</div>
+        <textarea id="gcp-token-input" class="filter-input"
+                  style="width:100%;height:75px;font-family:monospace;font-size:11px;resize:vertical;margin-top:4px"
+                  placeholder="ya29.A0ARrdaM..."></textarea>
+        <div style="margin-top:10px">
+          <button class="btn-scan btn-scan-gcp" onclick="saveGcpToken()">✅ 적용</button>
+        </div>
+        <div id="gcp-token-msg" style="margin-top:8px;font-size:12px;white-space:pre-line"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       관리자 비밀번호 변경
+  ══════════════════════════════════════════ -->
+  <div class="table-card">
+    <div class="table-header"><span class="table-title">🔐 관리자 비밀번호 변경</span></div>
+    <div style="padding:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <div>
+        <div class="settings-label">현재 비밀번호</div>
+        <input type="password" class="filter-input" style="width:100%" id="pw-current">
+      </div>
+      <div>
+        <div class="settings-label">새 비밀번호 (8자 이상)</div>
+        <input type="password" class="filter-input" style="width:100%" id="pw-new">
+      </div>
+      <div>
+        <div class="settings-label">비밀번호 확인</div>
+        <input type="password" class="filter-input" style="width:100%" id="pw-confirm">
+      </div>
+      <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center">
+        <button class="btn-scan" style="background:#6366f1;padding:7px 20px" onclick="changePassword()">변경</button>
+        <span id="pw-msg" style="font-size:12px;color:var(--t2)"></span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function gcpAuthTab(tab) {
+  document.getElementById('gcp-panel-sa').style.display    = tab === 'sa'    ? 'block' : 'none';
+  document.getElementById('gcp-panel-token').style.display = tab === 'token' ? 'block' : 'none';
+  document.getElementById('gcp-tab-sa').style.cssText    = tab === 'sa'    ? 'background:#1a73e8;color:#fff' : '';
+  document.getElementById('gcp-tab-token').style.cssText = tab === 'token' ? 'background:#1a73e8;color:#fff' : '';
+}
+
+async function saveAwsCreds() {
+  const msg = document.getElementById('aws-creds-msg');
+  msg.textContent = '⏳ 저장 중...';
+  msg.style.color = 'var(--t2)';
+  try {
+    const r = await fetch('/api/admin/credentials/aws', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        key_id: document.getElementById('aws-key-id').value.trim(),
+        secret: document.getElementById('aws-secret').value.trim(),
+        region: document.getElementById('aws-region').value,
+      })
+    });
+    const d = await r.json();
+    msg.textContent = d.message;
+    msg.style.color = d.ok ? 'var(--green)' : 'var(--red)';
+  } catch(e) {
+    msg.textContent = '오류: ' + e.message;
+    msg.style.color = 'var(--red)';
+  }
+}
+
+async function saveGcpSA() {
+  const msg = document.getElementById('gcp-sa-msg');
+  msg.textContent = '⏳ 저장 중...';
+  msg.style.color = 'var(--t2)';
+  try {
+    const r = await fetch('/api/admin/credentials/gcp/service_account', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ json: document.getElementById('gcp-sa-json').value.trim() })
+    });
+    const d = await r.json();
+    msg.textContent = d.message || (await r.json()).detail;
+    msg.style.color = d.ok ? 'var(--green)' : 'var(--red)';
+    if (d.ok) setTimeout(() => loadSettings(), 1500);
+  } catch(e) {
+    msg.textContent = '오류: ' + e.message;
+    msg.style.color = 'var(--red)';
+  }
+}
+
+async function deleteGcpSA() {
+  if (!confirm('서비스 계정 키를 삭제하고 gcloud 토큰으로 전환합니까?')) return;
+  const r = await fetch('/api/admin/credentials/gcp/service_account', { method: 'DELETE', credentials: 'same-origin' });
+  const d = await r.json();
+  alert(d.message);
+  loadSettings();
+}
+
+async function saveGcpToken() {
+  const msg = document.getElementById('gcp-token-msg');
+  msg.textContent = '⏳ 적용 중...';
+  msg.style.color = 'var(--t2)';
+  try {
+    const r = await fetch('/api/admin/credentials/gcp/token', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ token: document.getElementById('gcp-token-input').value.trim() })
+    });
+    const d = await r.json();
+    msg.textContent = d.message || d.detail;
+    msg.style.color = d.ok ? 'var(--green)' : 'var(--red)';
+  } catch(e) {
+    msg.textContent = '오류: ' + e.message;
+    msg.style.color = 'var(--red)';
+  }
+}
+
+async function changePassword() {
+  const cur = document.getElementById('pw-current').value;
+  const nw = document.getElementById('pw-new').value;
+  const conf = document.getElementById('pw-confirm').value;
+  const msg = document.getElementById('pw-msg');
+  if (nw !== conf) { msg.textContent = '새 비밀번호가 일치하지 않습니다'; return; }
+  try {
+    const res = await fetch('/api/admin/change-password', {
+      method: 'POST', credentials: 'same-origin',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({current_password: cur, new_password: nw})
+    });
+    if (res.ok) {
+      msg.textContent = '✓ 변경 완료';
+      msg.style.color = 'var(--green)';
+    } else {
+      const d = await res.json();
+      msg.textContent = '오류: ' + (d.detail || '실패');
+      msg.style.color = 'var(--red)';
+    }
+  } catch(e) {
+    msg.textContent = '오류: ' + e.message;
+    msg.style.color = 'var(--red)';
+  }
+}
+
+// ── 초기 로드 ─────────────────────────────────────────────────────────
+switchTab('dashboard');
+initHistoryDates();
+</script>
+</body>
+</html>

@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MSP Manager — 통합 클라우드 관리</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; font-size: 13px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+  /* ── Header ── */
+  .header {
+    background: #13151f;
+    border-bottom: 1px solid #252840;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 50px;
+    flex-shrink: 0;
+    z-index: 200;
+  }
+  .logo { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+  .logo span { color: #6366f1; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .btn-login { background: #6366f1; color: #fff; border: none; padding: 5px 13px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; }
+  .admin-tag { background: #1e293b; color: #64748b; font-size: 11px; padding: 3px 9px; border-radius: 5px; }
+
+  /* ── Layout ── */
+  .layout { display: flex; flex: 1; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 196px;
+    flex-shrink: 0;
+    background: #13151f;
+    border-right: 1px solid #252840;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 8px 0 24px;
+  }
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: #2d3148; border-radius: 4px; }
+
+  /* 섹션 구분 레이블 */
+  .nav-section-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    padding: 14px 14px 5px;
+    color: #374151;
+    user-select: none;
+  }
+  .nav-section-label .label-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .label-dot-gcp { background: #3b82f6; }
+  .label-dot-aws { background: #f97316; }
+
+  .nav-divider { border: none; border-top: 1px solid #1e2235; margin: 8px 6px; }
+
+  /* 메뉴 아이템 */
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+    border-left: 3px solid transparent;
+    border-radius: 0 6px 6px 0;
+    margin-right: 8px;
+    transition: all 0.12s;
+    user-select: none;
+  }
+  .nav-item:hover { background: #1c1f2e; color: #94a3b8; }
+  .nav-item.active { color: #e2e8f0; background: #1c1f2e; }
+  .nav-item.active.dash  { border-left-color: #6366f1; color: #a5b4fc; }
+  .nav-item.active.gcp   { border-left-color: #3b82f6; color: #60a5fa; }
+  .nav-item.active.aws   { border-left-color: #f97316; color: #fb923c; }
+  .nav-item.active.settings { border-left-color: #475569; color: #94a3b8; }
+  .nav-icon { font-size: 13px; width: 16px; text-align: center; flex-shrink: 0; }
+
+  /* ── Main content ── */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+  }
+  .main::-webkit-scrollbar { width: 6px; }
+  .main::-webkit-scrollbar-thumb { background: #2d3148; border-radius: 4px; }
+
+  /* ── Page title ── */
+  .page-title { font-size: 16px; font-weight: 700; color: #f1f5f9; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .page-title-sub { font-size: 12px; color: #475569; font-weight: 400; margin-left: 4px; }
+
+  /* ── Cards ── */
+  .overview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .card { background: #1a1d27; border: 1px solid #252840; border-radius: 10px; padding: 15px 16px; }
+  .card-label { font-size: 11px; color: #64748b; margin-bottom: 6px; font-weight: 500; }
+  .card-value { font-size: 26px; font-weight: 700; color: #e2e8f0; line-height: 1; }
+  .card-sub { font-size: 11px; color: #475569; margin-top: 6px; }
+  .card-gcp { border-top: 2px solid #3b82f6; }
+  .card-aws { border-top: 2px solid #f97316; }
+  .card-warn { border-top: 2px solid #f59e0b; }
+  .card-ok { border-top: 2px solid #10b981; }
+
+  /* ── Two column ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  /* ── Table card ── */
+  .table-card { background: #1a1d27; border: 1px solid #252840; border-radius: 10px; overflow: hidden; margin-bottom: 16px; }
+  .table-header { padding: 12px 16px; border-bottom: 1px solid #252840; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .table-title { font-size: 13px; font-weight: 600; color: #e2e8f0; }
+  .table-badge { font-size: 10px; padding: 2px 8px; border-radius: 8px; margin-left: 6px; }
+  .badge-blue { background: #1e3a5f; color: #60a5fa; }
+  .badge-orange { background: #2d1e0f; color: #fb923c; }
+  .badge-green { background: #052e16; color: #4ade80; }
+  .badge-red { background: #2d0f0f; color: #f87171; }
+  .badge-gray { background: #1e293b; color: #94a3b8; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 7px 14px; font-size: 10px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #252840; background: #13151f; }
+  td { padding: 8px 14px; border-bottom: 1px solid #1c1f2e; font-size: 12px; color: #cbd5e1; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #1c1f2e; }
+
+  /* ── Misc UI ── */
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; }
+  .dot-green { background: #4ade80; } .dot-red { background: #f87171; }
+  .dot-yellow { background: #fbbf24; } .dot-gray { background: #475569; }
+  .tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 500; }
+  .tag-billing { background: #1e3a5f; color: #60a5fa; }
+  .tag-deletable { background: #052e16; color: #4ade80; }
+  .tag-check { background: #2d1e0f; color: #fbbf24; }
+  .tag-disabled { background: #1e293b; color: #64748b; }
+  .tag-infra { background: #1e3a5f; color: #60a5fa; }
+  .tag-dkt { background: #2d1e0f; color: #fbbf24; }
+  .tag-root { background: #1e293b; color: #64748b; }
+
+  .btn-sm { background: #252840; border: none; color: #94a3b8; padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; }
+  .btn-sm:hover { background: #2d3148; color: #e2e8f0; }
+  .btn-danger { background: #2d0f0f; color: #f87171; }
+  .btn-danger:hover { background: #3d1515; }
+  .btn-scan { border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; color: #fff; }
+  .btn-scan-gcp { background: #1d4ed8; }
+  .btn-scan-aws { background: #c2410c; }
+
+  .scan-bar { background: #1a1d27; border: 1px solid #252840; border-radius: 10px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .scan-status { font-size: 12px; color: #64748b; }
+
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .filter-select { background: #1a1d27; border: 1px solid #252840; color: #94a3b8; padding: 5px 10px; border-radius: 6px; font-size: 12px; }
+  .filter-input { background: #1a1d27; border: 1px solid #252840; color: #e2e8f0; padding: 5px 10px; border-radius: 6px; font-size: 12px; width: 200px; }
+  .filter-input::placeholder { color: #475569; }
+
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .stats-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .stat-item { background: #1a1d27; border: 1px solid #252840; border-radius: 8px; padding: 10px 14px; flex: 1; min-width: 90px; }
+  .stat-num { font-size: 20px; font-weight: 700; color: #e2e8f0; }
+  .stat-label { font-size: 10px; color: #475569; margin-top: 2px; }
+
+  .section-title { font-size: 11px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; margin-top: 4px; }
+
+  .alert { background: #2d1e0f; border: 1px solid #92400e; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #fbbf24; margin-bottom: 14px; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .table-scroll { overflow-x: auto; }
+
+  /* resource heatmap */
+  .res-num { display: inline-block; min-width: 22px; text-align: center; padding: 1px 4px; border-radius: 3px; font-weight: 600; font-size: 11px; }
+  .res-0 { color: #374151; } .res-low { color: #60a5fa; background: #1e3a5f22; }
+  .res-mid { color: #f59e0b; background: #2d1e0f44; } .res-high { color: #f87171; background: #2d0f0f44; }
+
+  /* cost bar */
+  .cost-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .cost-bar-bg { flex: 1; background: #252840; border-radius: 3px; height: 5px; max-width: 80px; }
+  .cost-bar-fill { height: 5px; border-radius: 3px; background: #fb923c; }
+
+  /* GCP CMDB tab active */
+  .gcmdb-tab.active-gcmdb { background: #1d4ed8; color: #fff; }
+
+  /* OU Tree */
+  .tree-node { padding: 2px 0 2px 18px; border-left: 1px solid #252840; margin-left: 12px; }
+  .tree-root { padding: 0; border-left: none; margin-left: 0; }
+  .tree-item { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+  .tree-item:hover { background: #1c1f2e; }
+  .tree-name { font-size: 12px; color: #e2e8f0; }
+  .tree-count { font-size: 10px; color: #475569; margin-left: auto; }
+  .tree-account { color: #64748b !important; font-size: 11px !important; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">MSP <span>Manager</span></div>
+  <div class="header-right">
+    <span class="admin-tag">👁 Viewer 모드</span>
+    <button class="btn-login">관리자 로그인</button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ════════════════ SIDEBAR ════════════════ -->
+  <nav class="sidebar">
+
+    <!-- 대시보드 -->
+    <div class="nav-item dash active" id="nav-dash" onclick="switchTab('dashboard')">
+      <span class="nav-icon">🏠</span> 대시보드
+    </div>
+
+    <hr class="nav-divider">
+
+    <!-- GCP -->
+    <div class="nav-section-label">
+      <span class="label-dot label-dot-gcp"></span> GCP
+    </div>
+    <div class="nav-item gcp" id="nav-gcp-projects" onclick="switchTab('gcp-projects')">
+      <span class="nav-icon">📋</span> 프로젝트
+    </div>
+    <div class="nav-item gcp" id="nav-gcp-resources" onclick="switchTab('gcp-resources')">
+      <span class="nav-icon">🗂</span> 리소스 현황
+    </div>
+    <div class="nav-item gcp" id="nav-gcp-billing" onclick="switchTab('gcp-billing')">
+      <span class="nav-icon">💳</span> 빌링
+    </div>
+
+    <hr class="nav-divider">
+
+    <!-- AWS -->
+    <div class="nav-section-label">
+      <span class="label-dot label-dot-aws"></span> AWS
+    </div>
+    <div class="nav-item aws" id="nav-aws-accounts" onclick="switchTab('aws-accounts')">
+      <span class="nav-icon">🏢</span> 계정
+    </div>
+    <div class="nav-item aws" id="nav-aws-cmdb" onclick="switchTab('aws-cmdb')">
+      <span class="nav-icon">🖥</span> CMDB
+    </div>
+    <div class="nav-item aws" id="nav-aws-costs" onclick="switchTab('aws-costs')">
+      <span class="nav-icon">💰</span> 비용 분석
+    </div>
+    <div class="nav-item aws" id="nav-aws-org" onclick="switchTab('aws-org')">
+      <span class="nav-icon">🌐</span> 조직 관리
+    </div>
+
+    <hr class="nav-divider">
+
+    <!-- 설정 -->
+    <div class="nav-item settings" id="nav-settings" onclick="switchTab('settings')">
+      <span class="nav-icon">⚙</span> 설정
+    </div>
+
+  </nav>
+
+  <!-- ════════════════ MAIN ════════════════ -->
+  <div class="main">
+
+    <!-- ────────── 대시보드 ────────── -->
+    <div id="tab-dashboard" class="tab-content active">
+      <div class="page-title">🏠 대시보드 <span class="page-title-sub">통합 클라우드 현황</span></div>
+
+      <div class="overview-grid">
+        <div class="card card-gcp">
+          <div class="card-label">GCP 전체 프로젝트</div>
+          <div class="card-value">780</div>
+          <div class="card-sub">빌링 연결 148 · 미연결 632</div>
+        </div>
+        <div class="card card-warn">
+          <div class="card-label">GCP 정리 대상</div>
+          <div class="card-value">45</div>
+          <div class="card-sub">즉시 삭제 가능 · 소유자 확인 612</div>
+        </div>
+        <div class="card card-aws">
+          <div class="card-label">AWS 멤버 계정</div>
+          <div class="card-value">17</div>
+          <div class="card-sub">이번달 비용 $539.92</div>
+        </div>
+        <div class="card card-ok">
+          <div class="card-label">GCP 총 리소스</div>
+          <div class="card-value">833</div>
+          <div class="card-sub">Storage 59 · SA 105 · Fn 17</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="table-card">
+          <div class="table-header">
+            <div><span class="table-title">GCP 최근 스캔</span><span class="table-badge badge-blue">2026-06-01 14:23</span></div>
+            <button class="btn-scan btn-scan-gcp">🔄 재스캔</button>
+          </div>
+          <table>
+            <tr><th>구분</th><th class="num">건수</th><th>상태</th></tr>
+            <tr><td>전체 프로젝트</td><td class="num">780</td><td><span class="dot dot-green"></span>완료</td></tr>
+            <tr><td>빌링 연결 (OPEN)</td><td class="num">121</td><td><span class="dot dot-green"></span>정상</td></tr>
+            <tr><td>빌링 연결 (CLOSED)</td><td class="num">27</td><td><span class="dot dot-yellow"></span>확인 필요</td></tr>
+            <tr><td>빌링 미연결</td><td class="num">632</td><td><span class="dot dot-gray"></span>-</td></tr>
+            <tr><td>리소스 스캔 (148개)</td><td class="num">833</td><td><span class="dot dot-green"></span>45초</td></tr>
+          </table>
+        </div>
+
+        <div class="table-card">
+          <div class="table-header">
+            <div><span class="table-title">AWS 이번달 비용 Top 5</span><span class="table-badge badge-orange">2026년 6월</span></div>
+            <button class="btn-scan btn-scan-aws">💰 조회</button>
+          </div>
+          <table>
+            <tr><th>계정</th><th class="num">USD</th><th>비율</th></tr>
+            <tr><td>kep-sre</td><td class="num">$198.40</td><td><div class="cost-bar-wrap"><div class="cost-bar-bg"><div class="cost-bar-fill" style="width:80%"></div></div><span style="font-size:10px;color:#475569">37%</span></div></td></tr>
+            <tr><td>kep-shared</td><td class="num">$142.20</td><td><div class="cost-bar-wrap"><div class="cost-bar-bg"><div class="cost-bar-fill" style="width:57%"></div></div><span style="font-size:10px;color:#475569">26%</span></div></td></tr>
+            <tr><td>ConnectLive</td><td class="num">$88.51</td><td><div class="cost-bar-wrap"><div class="cost-bar-bg"><div class="cost-bar-fill" style="width:35%"></div></div><span style="font-size:10px;color:#475569">16%</span></div></td></tr>
+            <tr><td>kep-sb-kicrd</td><td class="num">$62.10</td><td><div class="cost-bar-wrap"><div class="cost-bar-bg"><div class="cost-bar-fill" style="width:25%"></div></div><span style="font-size:10px;color:#475569">11%</span></div></td></tr>
+            <tr><td>laasprod</td><td class="num">$48.71</td><td><div class="cost-bar-wrap"><div class="cost-bar-bg"><div class="cost-bar-fill" style="width:19%"></div></div><span style="font-size:10px;color:#475569">9%</span></div></td></tr>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-title">AWS 리소스 요약 (CMDB)</div>
+      <div class="stats-row">
+        <div class="stat-item"><div class="stat-num">87</div><div class="stat-label">🖥 EC2</div></div>
+        <div class="stat-item"><div class="stat-num">34</div><div class="stat-label">🗄 S3</div></div>
+        <div class="stat-item"><div class="stat-num">22</div><div class="stat-label">🗃 RDS</div></div>
+        <div class="stat-item"><div class="stat-num">15</div><div class="stat-label">📦 ECS</div></div>
+        <div class="stat-item"><div class="stat-num">8</div><div class="stat-label">⎈ EKS</div></div>
+        <div class="stat-item"><div class="stat-num">312</div><div class="stat-label">🌐 Subnet</div></div>
+      </div>
+    </div>
+
+    <!-- ────────── GCP 프로젝트 ────────── -->
+    <div id="tab-gcp-projects" class="tab-content">
+      <div class="page-title" style="color:#60a5fa">📋 GCP 프로젝트 <span class="page-title-sub" style="color:#475569">kakaoenterprise.com · 780개</span></div>
+
+      <div class="scan-bar">
+        <span class="scan-status">마지막 스캔: <strong>2026-06-01 14:23</strong> · 780개 프로젝트 · 소요 2분 10초</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn-scan btn-scan-gcp">🔄 전체 스캔</button>
+          <button class="btn-sm">📥 Excel 다운로드</button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <select class="filter-select"><option>빌링 전체</option><option>연결됨 (OPEN)</option><option>연결됨 (CLOSED)</option><option>미연결</option></select>
+        <select class="filter-select"><option>삭제 여부 전체</option><option>빌링연결</option><option>즉시 삭제 가능</option><option>소유자 확인 필요</option></select>
+        <select class="filter-select"><option>소유자 전체</option><option>있음</option><option>없음</option></select>
+        <input class="filter-input" placeholder="🔍 프로젝트 ID 검색...">
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <div><span class="table-title">프로젝트 목록</span><span class="table-badge badge-blue">780개</span><span class="table-badge badge-red">즉시삭제 45개</span></div>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <tr><th>프로젝트 ID</th><th>이름</th><th>생성일</th><th>빌링 상태</th><th>빌링 계정</th><th>소유자</th><th>삭제 여부</th><th>액션</th></tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td><td>My App Production</td>
+              <td style="color:#475569;font-size:11px">2022-03-14</td>
+              <td><span class="dot dot-green"></span>연결됨 OPEN</td>
+              <td style="font-family:monospace;font-size:10px;color:#64748b">ABCD12-345678</td>
+              <td style="font-size:11px">user:admin@kakaoenterprise.com</td>
+              <td><span class="tag tag-billing">빌링연결</span></td><td>-</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">legacy-test-3310</td><td>Legacy Test</td>
+              <td style="color:#475569;font-size:11px">2020-11-02</td>
+              <td><span class="dot dot-yellow"></span>연결됨 CLOSED</td>
+              <td style="font-family:monospace;font-size:10px;color:#64748b">EFGH90-112233</td>
+              <td style="font-size:11px">user:dev@kakaoenterprise.com</td>
+              <td><span class="tag tag-billing">빌링연결</span></td><td>-</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">temp-project-9981</td><td>Temp Project</td>
+              <td style="color:#475569;font-size:11px">2021-06-20</td>
+              <td><span class="dot dot-gray"></span>미연결</td>
+              <td style="color:#475569">-</td>
+              <td style="font-size:11px">user:ops@kakaoenterprise.com</td>
+              <td><span class="tag tag-deletable">즉시 삭제 가능</span></td>
+              <td><button class="btn-sm btn-danger" disabled>🗑 삭제</button></td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">orphan-project-1145</td><td>My Project</td>
+              <td style="color:#475569;font-size:11px">2019-04-05</td>
+              <td><span class="dot dot-gray"></span>미연결</td>
+              <td style="color:#475569">-</td>
+              <td style="color:#475569;font-size:11px">-</td>
+              <td><span class="tag tag-check">소유자 확인 필요</span></td>
+              <td><button class="btn-sm btn-danger" disabled>🗑 삭제</button></td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">k8s-cluster-dev-0042</td><td>K8s Dev Cluster</td>
+              <td style="color:#475569;font-size:11px">2023-08-17</td>
+              <td><span class="dot dot-green"></span>연결됨 OPEN</td>
+              <td style="font-family:monospace;font-size:10px;color:#64748b">KLMN01-998877</td>
+              <td style="font-size:11px">serviceAccount:app@appspot.gserviceaccount.com</td>
+              <td><span class="tag tag-billing">빌링연결</span></td><td>-</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── GCP 리소스 CMDB ────────── -->
+    <div id="tab-gcp-resources" class="tab-content">
+      <div class="page-title" style="color:#60a5fa">🗂 GCP 리소스 CMDB <span class="page-title-sub">빌링 연결 148개 프로젝트 · 총 833개</span></div>
+
+      <div class="scan-bar">
+        <span class="scan-status">마지막 스캔: <strong>2026-06-01 14:25</strong> · 148/148 완료 · 45초</span>
+        <button class="btn-scan btn-scan-gcp">🔄 리소스 재스캔</button>
+      </div>
+
+      <!-- 요약 카운터 -->
+      <div class="stats-row">
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('vm')"><div class="stat-num">0</div><div class="stat-label">🖥 VM</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('run')"><div class="stat-num">0</div><div class="stat-label">☁ Cloud Run</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('fn')"><div class="stat-num">17</div><div class="stat-label">⚡ Functions</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('gke')"><div class="stat-num">0</div><div class="stat-label">⎈ GKE</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('storage')"><div class="stat-num">59</div><div class="stat-label">🗄 Storage</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('sql')"><div class="stat-num">16</div><div class="stat-label">🗃 SQL</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('pubsub')"><div class="stat-num">16</div><div class="stat-label">📨 PubSub</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('vpc')"><div class="stat-num">28</div><div class="stat-label">🌐 VPC</div></div>
+        <div class="stat-item" style="cursor:pointer" onclick="switchGcpCmdb('sa')"><div class="stat-num">105</div><div class="stat-label">👤 SA</div></div>
+      </div>
+
+      <!-- 리소스 타입 탭 + 검색 -->
+      <div class="filter-bar" style="justify-content:space-between">
+        <div id="gcp-cmdb-tabs" style="display:flex;gap:3px;background:#1a1d27;border:1px solid #252840;border-radius:7px;padding:3px;flex-wrap:wrap">
+          <button class="btn-sm gcmdb-tab active-gcmdb" onclick="switchGcpCmdb('vm')">🖥 VM</button>
+          <button class="btn-sm gcmdb-tab" onclick="switchGcpCmdb('run')">☁ Run</button>
+          <button class="btn-sm gcmdb-tab" onclick="switchGcpCmdb('fn')">⚡ Functions</button>
+          <button class="btn-sm gcmdb-tab" onclick="switchGcpCmdb('gke')">⎈ GKE</button>
+          <button class="btn-sm gcmdb-tab" onclick="switchGcpCmdb('storage')">🗄 Storage</button>
+          <button class="btn-sm gcmdb-tab" onclick="switchGcpCmdb('sql')">🗃 SQL</button>
+          <button class="btn-sm gcmdb-tab" onclick="switchGcpCmdb('pubsub')">📨 PubSub</button>
+          <button class="btn-sm gcmdb-tab" onclick="switchGcpCmdb('vpc')">🌐 VPC</button>
+          <button class="btn-sm gcmdb-tab" onclick="switchGcpCmdb('lb')">⚖ LB</button>
+          <button class="btn-sm gcmdb-tab" onclick="switchGcpCmdb('sa')">👤 SA</button>
+          <button class="btn-sm gcmdb-tab" onclick="switchGcpCmdb('sink')">📋 LogSink</button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <select class="filter-select"><option>전체 프로젝트</option><option>myapp-production-8821</option><option>data-pipeline-prod-2209</option></select>
+          <input class="filter-input" placeholder="🔍 리소스 이름 검색...">
+        </div>
+      </div>
+
+      <!-- VM -->
+      <div class="gcp-cmdb-panel" id="gcmdb-vm">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">🖥 VM 인스턴스</span><span class="table-badge badge-blue">0개</span></div>
+          <div style="padding:32px;text-align:center;color:#374151;font-size:13px">빌링 연결 프로젝트에 VM 인스턴스가 없습니다.</div>
+        </div>
+      </div>
+
+      <!-- Cloud Run -->
+      <div class="gcp-cmdb-panel" id="gcmdb-run" style="display:none">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">☁ Cloud Run 서비스</span><span class="table-badge badge-blue">3개</span></div>
+          <div class="table-scroll"><table>
+            <tr><th>프로젝트</th><th>서비스명</th><th>리전</th><th>URL</th><th>상태</th><th class="num">트래픽</th></tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td><strong>api-gateway</strong></td><td>asia-northeast3</td>
+              <td style="font-family:monospace;font-size:10px;color:#60a5fa">api-gateway-xxx-du.a.run.app</td>
+              <td><span class="dot dot-green"></span>ACTIVE</td><td class="num">100%</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td><strong>user-service</strong></td><td>asia-northeast3</td>
+              <td style="font-family:monospace;font-size:10px;color:#60a5fa">user-service-xxx-du.a.run.app</td>
+              <td><span class="dot dot-green"></span>ACTIVE</td><td class="num">100%</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td><strong>notification-svc</strong></td><td>asia-northeast3</td>
+              <td style="font-family:monospace;font-size:10px;color:#60a5fa">notif-xxx-du.a.run.app</td>
+              <td><span class="dot dot-green"></span>ACTIVE</td><td class="num">100%</td>
+            </tr>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- Functions -->
+      <div class="gcp-cmdb-panel" id="gcmdb-fn" style="display:none">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">⚡ Cloud Functions</span><span class="table-badge badge-blue">17개</span></div>
+          <div class="table-scroll"><table>
+            <tr><th>프로젝트</th><th>함수명</th><th>런타임</th><th>리전</th><th>트리거</th><th>상태</th><th class="num">메모리</th></tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">data-pipeline-prod-2209</td>
+              <td><strong>ingest-raw-data</strong></td>
+              <td style="font-family:monospace;font-size:11px">python311</td>
+              <td>asia-northeast3</td><td>Pub/Sub</td>
+              <td><span class="dot dot-green"></span>ACTIVE</td><td class="num">256MB</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">data-pipeline-prod-2209</td>
+              <td><strong>transform-events</strong></td>
+              <td style="font-family:monospace;font-size:11px">python311</td>
+              <td>asia-northeast3</td><td>Pub/Sub</td>
+              <td><span class="dot dot-green"></span>ACTIVE</td><td class="num">512MB</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">data-pipeline-prod-2209</td>
+              <td><strong>export-to-bq</strong></td>
+              <td style="font-family:monospace;font-size:11px">python311</td>
+              <td>asia-northeast3</td><td>HTTP</td>
+              <td><span class="dot dot-green"></span>ACTIVE</td><td class="num">256MB</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td><strong>send-email-alert</strong></td>
+              <td style="font-family:monospace;font-size:11px">nodejs20</td>
+              <td>us-central1</td><td>HTTP</td>
+              <td><span class="dot dot-green"></span>ACTIVE</td><td class="num">128MB</td>
+            </tr>
+            <tr>
+              <td colspan="7" style="text-align:center;color:#475569;font-size:11px;padding:8px">외 13개 더보기...</td>
+            </tr>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- GKE -->
+      <div class="gcp-cmdb-panel" id="gcmdb-gke" style="display:none">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">⎈ GKE 클러스터</span><span class="table-badge badge-blue">0개</span></div>
+          <div style="padding:32px;text-align:center;color:#374151;font-size:13px">빌링 연결 프로젝트에 GKE 클러스터가 없습니다.</div>
+        </div>
+      </div>
+
+      <!-- Storage -->
+      <div class="gcp-cmdb-panel" id="gcmdb-storage" style="display:none">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">🗄 Cloud Storage 버킷</span><span class="table-badge badge-blue">59개</span></div>
+          <div class="table-scroll"><table>
+            <tr><th>프로젝트</th><th>버킷명</th><th>리전</th><th>스토리지 클래스</th><th>공개 여부</th><th>버전관리</th></tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">data-pipeline-prod-2209</td>
+              <td style="font-family:monospace;font-size:11px"><strong>kep-raw-data-prod</strong></td>
+              <td>ASIA-NORTHEAST3</td><td>STANDARD</td>
+              <td><span class="tag tag-deletable">비공개</span></td><td><span class="dot dot-green"></span>ON</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">data-pipeline-prod-2209</td>
+              <td style="font-family:monospace;font-size:11px"><strong>kep-processed-data</strong></td>
+              <td>ASIA-NORTHEAST3</td><td>NEARLINE</td>
+              <td><span class="tag tag-deletable">비공개</span></td><td><span class="dot dot-red"></span>OFF</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td style="font-family:monospace;font-size:11px"><strong>myapp-assets-prod</strong></td>
+              <td>ASIA-NORTHEAST3</td><td>STANDARD</td>
+              <td><span class="tag tag-check">공개</span></td><td><span class="dot dot-red"></span>OFF</td>
+            </tr>
+            <tr>
+              <td colspan="6" style="text-align:center;color:#475569;font-size:11px;padding:8px">외 56개 더보기...</td>
+            </tr>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- SQL -->
+      <div class="gcp-cmdb-panel" id="gcmdb-sql" style="display:none">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">🗃 Cloud SQL</span><span class="table-badge badge-blue">16개</span></div>
+          <div class="table-scroll"><table>
+            <tr><th>프로젝트</th><th>인스턴스</th><th>DB 엔진</th><th>버전</th><th>티어</th><th>리전</th><th>상태</th></tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td><strong>myapp-mysql-prod</strong></td>
+              <td>MySQL</td><td>8.0</td>
+              <td style="font-family:monospace;font-size:11px">db-n1-standard-2</td>
+              <td>asia-northeast3</td>
+              <td><span class="dot dot-green"></span>RUNNABLE</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td><strong>myapp-pg-analytics</strong></td>
+              <td>PostgreSQL</td><td>15</td>
+              <td style="font-family:monospace;font-size:11px">db-n1-standard-4</td>
+              <td>asia-northeast3</td>
+              <td><span class="dot dot-green"></span>RUNNABLE</td>
+            </tr>
+            <tr>
+              <td colspan="7" style="text-align:center;color:#475569;font-size:11px;padding:8px">외 14개 더보기...</td>
+            </tr>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- PubSub -->
+      <div class="gcp-cmdb-panel" id="gcmdb-pubsub" style="display:none">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">📨 Pub/Sub 토픽</span><span class="table-badge badge-blue">16개</span></div>
+          <div class="table-scroll"><table>
+            <tr><th>프로젝트</th><th>토픽명</th><th>구독 수</th><th>메시지 보존</th><th>암호화</th></tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">data-pipeline-prod-2209</td>
+              <td style="font-family:monospace;font-size:11px"><strong>raw-events-topic</strong></td>
+              <td>3</td><td>7일</td><td><span class="dot dot-green"></span>Google 관리</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">data-pipeline-prod-2209</td>
+              <td style="font-family:monospace;font-size:11px"><strong>processed-events</strong></td>
+              <td>2</td><td>7일</td><td><span class="dot dot-green"></span>Google 관리</td>
+            </tr>
+            <tr>
+              <td colspan="5" style="text-align:center;color:#475569;font-size:11px;padding:8px">외 14개 더보기...</td>
+            </tr>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- VPC -->
+      <div class="gcp-cmdb-panel" id="gcmdb-vpc" style="display:none">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">🌐 VPC 네트워크</span><span class="table-badge badge-blue">28개</span></div>
+          <div class="table-scroll"><table>
+            <tr><th>프로젝트</th><th>네트워크명</th><th>모드</th><th>서브넷 수</th><th>피어링</th></tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td><strong>myapp-vpc-prod</strong></td><td>CUSTOM</td><td>4</td>
+              <td><span class="dot dot-gray"></span>없음</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">k8s-cluster-dev-0042</td>
+              <td><strong>k8s-vpc-dev</strong></td><td>CUSTOM</td><td>3</td>
+              <td><span class="dot dot-green"></span>1개</td>
+            </tr>
+            <tr>
+              <td colspan="5" style="text-align:center;color:#475569;font-size:11px;padding:8px">외 26개 더보기...</td>
+            </tr>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- LB -->
+      <div class="gcp-cmdb-panel" id="gcmdb-lb" style="display:none">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">⚖ 로드밸런서</span><span class="table-badge badge-blue">8개</span></div>
+          <div class="table-scroll"><table>
+            <tr><th>프로젝트</th><th>이름</th><th>타입</th><th>IP 주소</th><th>포트</th><th>상태</th></tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td><strong>myapp-https-lb</strong></td><td>EXTERNAL</td>
+              <td style="font-family:monospace;font-size:11px">34.120.xxx.xxx</td>
+              <td>443</td><td><span class="dot dot-green"></span>ACTIVE</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td><strong>myapp-internal-lb</strong></td><td>INTERNAL</td>
+              <td style="font-family:monospace;font-size:11px">10.10.0.5</td>
+              <td>80, 8080</td><td><span class="dot dot-green"></span>ACTIVE</td>
+            </tr>
+            <tr>
+              <td colspan="6" style="text-align:center;color:#475569;font-size:11px;padding:8px">외 6개 더보기...</td>
+            </tr>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- SA -->
+      <div class="gcp-cmdb-panel" id="gcmdb-sa" style="display:none">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">👤 서비스 계정</span><span class="table-badge badge-blue">105개</span></div>
+          <div class="table-scroll"><table>
+            <tr><th>프로젝트</th><th>이메일</th><th>표시 이름</th><th>키 수</th><th>비활성화</th></tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td style="font-family:monospace;font-size:10px">app-backend@myapp-production-8821.iam.gserviceaccount.com</td>
+              <td>App Backend SA</td><td>1</td><td><span class="dot dot-green"></span>활성</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td style="font-family:monospace;font-size:10px">gcs-reader@myapp-production-8821.iam.gserviceaccount.com</td>
+              <td>GCS Reader</td><td>0</td><td><span class="dot dot-green"></span>활성</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">k8s-cluster-dev-0042</td>
+              <td style="font-family:monospace;font-size:10px">k8s-node-sa@k8s-cluster-dev-0042.iam.gserviceaccount.com</td>
+              <td>K8s Node SA</td><td>0</td><td><span class="dot dot-green"></span>활성</td>
+            </tr>
+            <tr>
+              <td colspan="5" style="text-align:center;color:#475569;font-size:11px;padding:8px">외 102개 더보기...</td>
+            </tr>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- LogSink -->
+      <div class="gcp-cmdb-panel" id="gcmdb-sink" style="display:none">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">📋 Log Sink</span><span class="table-badge badge-blue">298개</span><span class="table-badge badge-gray">기본 2개/프로젝트 포함</span></div>
+          <div class="table-scroll"><table>
+            <tr><th>프로젝트</th><th>싱크명</th><th>목적지 타입</th><th>목적지</th><th>필터</th></tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td style="font-family:monospace;font-size:11px">_Default</td>
+              <td><span class="tag tag-disabled">LogBucket</span></td>
+              <td style="font-size:11px;color:#64748b">_Default</td><td style="color:#475569">-</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td style="font-family:monospace;font-size:11px">_Required</td>
+              <td><span class="tag tag-disabled">LogBucket</span></td>
+              <td style="font-size:11px;color:#64748b">_Required</td><td style="color:#475569">-</td>
+            </tr>
+            <tr>
+              <td style="font-family:monospace;font-size:11px">myapp-production-8821</td>
+              <td style="font-family:monospace;font-size:11px">audit-to-bq</td>
+              <td><span class="tag tag-billing">BigQuery</span></td>
+              <td style="font-size:11px;color:#64748b">bq://myapp-prod.audit_logs</td>
+              <td style="font-size:11px">logName=~"cloudaudit"</td>
+            </tr>
+            <tr>
+              <td colspan="5" style="text-align:center;color:#475569;font-size:11px;padding:8px">외 295개 더보기...</td>
+            </tr>
+          </table></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ────────── GCP 빌링 ────────── -->
+    <div id="tab-gcp-billing" class="tab-content">
+      <div class="page-title" style="color:#60a5fa">💳 GCP 빌링 <span class="page-title-sub">빌링 계정 현황 및 비용</span></div>
+      <div class="two-col">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">빌링 계정 현황</span><span class="table-badge badge-blue">148개</span></div>
+          <table>
+            <tr><th>빌링 계정 ID</th><th>이름</th><th>상태</th><th class="num">프로젝트</th></tr>
+            <tr><td style="font-family:monospace;font-size:11px">ABCD12-345678</td><td>카카오엔터 메인</td><td><span class="dot dot-green"></span>OPEN</td><td class="num">42</td></tr>
+            <tr><td style="font-family:monospace;font-size:11px">EFGH90-112233</td><td>개발팀 빌링</td><td><span class="dot dot-red"></span>CLOSED</td><td class="num">18</td></tr>
+            <tr><td style="font-family:monospace;font-size:11px">KLMN01-998877</td><td>인프라팀 빌링</td><td><span class="dot dot-green"></span>OPEN</td><td class="num">31</td></tr>
+            <tr><td style="font-family:monospace;font-size:11px">OPQR23-556677</td><td>-</td><td style="color:#475569;font-size:11px">접근불가</td><td class="num">12</td></tr>
+          </table>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">BigQuery 비용 설정</span></div>
+          <div style="padding:16px">
+            <div style="margin-bottom:10px"><div style="font-size:11px;color:#64748b;margin-bottom:4px">BigQuery 프로젝트 ID</div><input class="filter-input" style="width:100%" value="kep-billing-bq"></div>
+            <div style="margin-bottom:14px"><div style="font-size:11px;color:#64748b;margin-bottom:4px">BigQuery 데이터셋</div><input class="filter-input" style="width:100%" value="gcp_billing_export"></div>
+            <button class="btn-scan btn-scan-gcp" style="width:100%;margin-bottom:8px">💾 설정 저장</button>
+            <button class="btn-sm" style="width:100%;padding:8px">🔍 비용 스캔 (최근 90일)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── AWS 계정 ────────── -->
+    <div id="tab-aws-accounts" class="tab-content">
+      <div class="page-title" style="color:#fb923c">🏢 AWS 계정 <span class="page-title-sub">o-kxb3ey01jq · 17개 멤버 계정</span></div>
+
+      <div class="scan-bar">
+        <span class="scan-status">Organizations 계정 17개 · 이번달 총 비용 <strong style="color:#fb923c">$539.92</strong></span>
+        <button class="btn-scan btn-scan-aws">🔄 새로고침</button>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header"><span class="table-title">멤버 계정 목록</span><span class="table-badge badge-orange">17개</span></div>
+        <table>
+          <tr><th>계정 ID</th><th>계정명</th><th>이메일</th><th>OU</th><th>상태</th><th class="num">이번달 비용</th><th>액션</th></tr>
+          <tr>
+            <td style="font-family:monospace;font-size:11px">059780172050</td><td><strong>kep-sre</strong></td>
+            <td style="font-size:11px;color:#64748b">sre@kakaoenterprise.com</td>
+            <td><span class="tag tag-infra">Infrastructure</span></td>
+            <td><span class="dot dot-green"></span>ACTIVE</td>
+            <td class="num" style="color:#fb923c"><strong>$198.40</strong></td>
+            <td><button class="btn-sm">리소스 조회</button></td>
+          </tr>
+          <tr>
+            <td style="font-family:monospace;font-size:11px">838155214946</td><td><strong>kep-shared</strong></td>
+            <td style="font-size:11px;color:#64748b">shared@kakaoenterprise.com</td>
+            <td><span class="tag tag-infra">Infrastructure</span></td>
+            <td><span class="dot dot-green"></span>ACTIVE</td>
+            <td class="num" style="color:#fb923c"><strong>$142.20</strong></td>
+            <td><button class="btn-sm">리소스 조회</button></td>
+          </tr>
+          <tr>
+            <td style="font-family:monospace;font-size:11px">846191957521</td><td><strong>ConnectLive</strong></td>
+            <td style="font-size:11px;color:#64748b">connectlive@kakaoenterprise.com</td>
+            <td><span class="tag tag-dkt">DKT</span></td>
+            <td><span class="dot dot-green"></span>ACTIVE</td>
+            <td class="num" style="color:#fb923c"><strong>$88.51</strong></td>
+            <td><button class="btn-sm">리소스 조회</button></td>
+          </tr>
+          <tr>
+            <td style="font-family:monospace;font-size:11px">795913841331</td><td><strong>kep-playground</strong></td>
+            <td style="font-size:11px;color:#64748b">playground@kakaoenterprise.com</td>
+            <td><span class="tag tag-root">PolicyTest</span></td>
+            <td><span class="dot dot-green"></span>ACTIVE</td>
+            <td class="num">$12.80</td>
+            <td><button class="btn-sm">리소스 조회</button></td>
+          </tr>
+          <tr>
+            <td style="font-family:monospace;font-size:11px">512742310938</td><td><strong>CNS_SPA_117</strong></td>
+            <td style="font-size:11px;color:#64748b">cns@kakaoenterprise.com</td>
+            <td><span class="tag tag-root">Root</span></td>
+            <td><span class="dot dot-green"></span>ACTIVE</td>
+            <td class="num">$388.00 <span style="font-size:10px;color:#475569">(SP포함 $3,208)</span></td>
+            <td><button class="btn-sm">리소스 조회</button></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ────────── AWS CMDB ────────── -->
+    <div id="tab-aws-cmdb" class="tab-content">
+      <div class="page-title" style="color:#fb923c">🖥 AWS CMDB <span class="page-title-sub">마지막 수집 2026-06-01 09:00</span></div>
+
+      <div class="scan-bar">
+        <span class="scan-status">CloudFront 캐시 기준 · EC2 87 · S3 34 · RDS 22 · ECS 15 · EKS 8 · Subnet 312</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn-sm">🔄 캐시 갱신</button>
+          <button class="btn-scan btn-scan-aws">▶ 수집 실행</button>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <div style="display:flex;gap:3px;background:#1a1d27;border:1px solid #252840;border-radius:7px;padding:3px">
+          <button class="btn-sm" style="background:#6366f1;color:#fff">EC2</button>
+          <button class="btn-sm">S3</button><button class="btn-sm">RDS</button>
+          <button class="btn-sm">ECS</button><button class="btn-sm">EKS</button><button class="btn-sm">Subnet</button>
+        </div>
+        <select class="filter-select"><option>전체 계정</option><option>kep-sre</option><option>kep-shared</option></select>
+        <input class="filter-input" placeholder="🔍 서버명 / IP 검색...">
+      </div>
+
+      <div class="table-card">
+        <div class="table-header"><span class="table-title">EC2 인스턴스</span><span class="table-badge badge-orange">87개</span></div>
+        <div class="table-scroll">
+          <table>
+            <tr><th>계정</th><th>이름</th><th>타입</th><th>상태</th><th>리전</th><th>Public IP</th><th>VPC</th><th>팀</th></tr>
+            <tr>
+              <td><span class="tag tag-infra">kep-sre</span></td><td>bastion-prod-01</td>
+              <td style="font-family:monospace;font-size:11px">t3.medium</td>
+              <td><span class="dot dot-green"></span>running</td>
+              <td>ap-northeast-2</td><td style="font-family:monospace;font-size:11px">52.78.xxx.xxx</td>
+              <td style="font-family:monospace;font-size:11px;color:#64748b">vpc-0a1b2c3d</td><td>SRE</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-infra">kep-sre</span></td><td>k8s-worker-01</td>
+              <td style="font-family:monospace;font-size:11px">c5.2xlarge</td>
+              <td><span class="dot dot-green"></span>running</td>
+              <td>ap-northeast-2</td><td style="color:#475569">-</td>
+              <td style="font-family:monospace;font-size:11px;color:#64748b">vpc-0a1b2c3d</td><td>Platform</td>
+            </tr>
+            <tr>
+              <td><span class="tag tag-dkt">ConnectLive</span></td><td>media-server-prod</td>
+              <td style="font-family:monospace;font-size:11px">c5.4xlarge</td>
+              <td><span class="dot dot-green"></span>running</td>
+              <td>ap-northeast-2</td><td style="font-family:monospace;font-size:11px">3.34.xxx.xxx</td>
+              <td style="font-family:monospace;font-size:11px;color:#64748b">vpc-9z8y7x6w</td><td>ConnectLive</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── AWS 비용 ────────── -->
+    <div id="tab-aws-costs" class="tab-content">
+      <div class="page-title" style="color:#fb923c">💰 AWS 비용 분석 <span class="page-title-sub">Cost Explorer · SP 수수료 필터 적용</span></div>
+
+      <div class="filter-bar">
+        <span style="font-size:12px;color:#64748b">기간:</span>
+        <select class="filter-select"><option>2026-06 (이번달)</option><option>2026-05</option><option>2026-04</option></select>
+        <select class="filter-select"><option>전체 계정</option><option>kep-sre</option><option>ConnectLive</option></select>
+      </div>
+
+      <div class="two-col">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">계정별 비용 요약</span><span class="table-badge badge-orange">총 $539.92</span></div>
+          <table>
+            <tr><th>계정명</th><th class="num">비용 (USD)</th><th class="num">SP 수수료</th><th>비율</th></tr>
+            <tr><td>kep-sre</td><td class="num">$198.40</td><td class="num" style="color:#475569">-</td><td><div class="cost-bar-wrap"><div class="cost-bar-bg"><div class="cost-bar-fill" style="width:80%"></div></div></div></td></tr>
+            <tr><td>kep-shared</td><td class="num">$142.20</td><td class="num" style="color:#475569">-</td><td><div class="cost-bar-wrap"><div class="cost-bar-bg"><div class="cost-bar-fill" style="width:57%"></div></div></div></td></tr>
+            <tr><td>ConnectLive</td><td class="num">$88.51</td><td class="num" style="color:#475569">-</td><td><div class="cost-bar-wrap"><div class="cost-bar-bg"><div class="cost-bar-fill" style="width:35%"></div></div></div></td></tr>
+            <tr><td>CNS_SPA_117</td><td class="num">$388.00</td><td class="num" style="color:#fbbf24">$2,820</td><td><div class="cost-bar-wrap"><div class="cost-bar-bg"><div class="cost-bar-fill" style="width:100%;background:#fbbf24"></div></div><span style="font-size:10px;color:#fbbf24">SP</span></div></td></tr>
+          </table>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">kep-sre 서비스별 비용</span><span class="table-badge badge-orange">2026-06</span></div>
+          <table>
+            <tr><th>서비스</th><th class="num">비용 (USD)</th></tr>
+            <tr><td>Amazon EC2</td><td class="num">$98.20</td></tr>
+            <tr><td>Amazon EKS</td><td class="num">$52.10</td></tr>
+            <tr><td>Amazon RDS</td><td class="num">$28.40</td></tr>
+            <tr><td>Amazon S3</td><td class="num">$11.80</td></tr>
+            <tr><td>AWS Data Transfer</td><td class="num">$7.90</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── AWS 조직 ────────── -->
+    <div id="tab-aws-org" class="tab-content">
+      <div class="page-title" style="color:#fb923c">🌐 AWS 조직 관리 <span class="page-title-sub">o-kxb3ey01jq · OU 트리</span></div>
+
+      <div class="two-col">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">OU 트리</span><span class="table-badge badge-orange">17 계정</span></div>
+          <div style="padding:12px">
+            <div class="tree-root">
+              <div class="tree-item"><span>🏢</span><span class="tree-name" style="font-weight:700">Root</span><span class="tree-count">17</span></div>
+              <div class="tree-node">
+                <div class="tree-item"><span>📁</span><span class="tree-name">Infrastructure</span><span class="tree-count">4</span></div>
+                <div class="tree-node">
+                  <div class="tree-item"><span>👤</span><span class="tree-name tree-account">kep-sre (059780172050)</span></div>
+                  <div class="tree-item"><span>👤</span><span class="tree-name tree-account">kep-shared (838155214946)</span></div>
+                  <div class="tree-item"><span>👤</span><span class="tree-name tree-account">kep-sb-kicserv (955637844268)</span></div>
+                  <div class="tree-item"><span>👤</span><span class="tree-name tree-account">kep-sb-dng (533267064847)</span></div>
+                </div>
+                <div class="tree-item"><span>📁</span><span class="tree-name">Sandbox</span><span class="tree-count">3</span></div>
+                <div class="tree-node">
+                  <div class="tree-item"><span>📂</span><span class="tree-name" style="color:#64748b">Compliant</span><span class="tree-count">3</span></div>
+                  <div class="tree-node">
+                    <div class="tree-item"><span>👤</span><span class="tree-name tree-account">kep-sb-kicrd</span></div>
+                    <div class="tree-item"><span>👤</span><span class="tree-name tree-account">kep-sb-cng</span></div>
+                    <div class="tree-item"><span>👤</span><span class="tree-name tree-account">kep-sb-ing</span></div>
+                  </div>
+                </div>
+                <div class="tree-item"><span>📁</span><span class="tree-name">Unmanaged</span><span class="tree-count">3</span></div>
+                <div class="tree-item"><span>📁</span><span class="tree-name">PendingReview</span><span class="tree-count">3</span></div>
+                <div class="tree-item"><span>📁</span><span class="tree-name">DKT</span><span class="tree-count">1</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">계정 이동</span><span class="table-badge badge-gray">Admin 전용</span></div>
+          <div style="padding:16px">
+            <div class="alert">🔒 계정 이동은 관리자 로그인 후 이용 가능합니다.</div>
+            <div style="margin-bottom:10px"><div style="font-size:11px;color:#64748b;margin-bottom:4px">이동할 계정</div><select class="filter-select" style="width:100%;padding:8px" disabled><option>계정 선택...</option></select></div>
+            <div style="margin-bottom:10px"><div style="font-size:11px;color:#64748b;margin-bottom:4px">현재 OU</div><input class="filter-input" style="width:100%" disabled placeholder="자동 입력"></div>
+            <div style="margin-bottom:14px"><div style="font-size:11px;color:#64748b;margin-bottom:4px">이동할 OU</div><select class="filter-select" style="width:100%;padding:8px" disabled><option>대상 OU 선택...</option></select></div>
+            <button class="btn-sm" style="width:100%;padding:8px" disabled>이동 실행 (Admin 전용)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ────────── 설정 ────────── -->
+    <div id="tab-settings" class="tab-content">
+      <div class="page-title">⚙ 설정</div>
+      <div class="alert">🔒 설정 변경은 관리자 로그인 후 이용 가능합니다.</div>
+      <div class="two-col">
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">관리자 비밀번호 변경</span></div>
+          <div style="padding:16px">
+            <div style="margin-bottom:10px"><div style="font-size:11px;color:#64748b;margin-bottom:4px">현재 비밀번호</div><input type="password" class="filter-input" style="width:100%" disabled></div>
+            <div style="margin-bottom:10px"><div style="font-size:11px;color:#64748b;margin-bottom:4px">새 비밀번호</div><input type="password" class="filter-input" style="width:100%" disabled></div>
+            <div style="margin-bottom:14px"><div style="font-size:11px;color:#64748b;margin-bottom:4px">비밀번호 확인</div><input type="password" class="filter-input" style="width:100%" disabled></div>
+            <button class="btn-sm" style="width:100%;padding:8px" disabled>변경 (Admin 전용)</button>
+          </div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">시스템 정보</span></div>
+          <div style="padding:16px">
+            <table>
+              <tr><td style="color:#64748b;padding:6px 0;font-size:12px;border:none">서버 포트</td><td style="font-family:monospace;border:none">9070</td></tr>
+              <tr><td style="color:#64748b;padding:6px 0;font-size:12px;border:none">GCP 조직</td><td style="font-size:12px;border:none">kakaoenterprise.com</td></tr>
+              <tr><td style="color:#64748b;padding:6px 0;font-size:12px;border:none">AWS Org ID</td><td style="font-family:monospace;border:none">o-kxb3ey01jq</td></tr>
+              <tr><td style="color:#64748b;padding:6px 0;font-size:12px;border:none">Management</td><td style="font-family:monospace;border:none">221481233822</td></tr>
+              <tr><td style="color:#64748b;padding:6px 0;font-size:12px;border:none">GCP 캐시</td><td style="color:#4ade80;font-size:11px;border:none">~/.msp_gcp_audit_cache.json</td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+/* ── GCP 리소스 CMDB 서브탭 ── */
+function switchGcpCmdb(type) {
+  document.querySelectorAll('.gcp-cmdb-panel').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.gcmdb-tab').forEach(el => el.classList.remove('active-gcmdb'));
+  document.getElementById('gcmdb-' + type).style.display = 'block';
+  const order = ['vm','run','fn','gke','storage','sql','pubsub','vpc','lb','sa','sink'];
+  const idx = order.indexOf(type);
+  const tabs = document.querySelectorAll('.gcmdb-tab');
+  if (idx >= 0 && tabs[idx]) tabs[idx].classList.add('active-gcmdb');
+}
+
+/* ── 메인 탭 전환 ── */
+const NAV_MAP = {
+  'dashboard':     'nav-dash',
+  'gcp-projects':  'nav-gcp-projects',
+  'gcp-resources': 'nav-gcp-resources',
+  'gcp-billing':   'nav-gcp-billing',
+  'aws-accounts':  'nav-aws-accounts',
+  'aws-cmdb':      'nav-aws-cmdb',
+  'aws-costs':     'nav-aws-costs',
+  'aws-org':       'nav-aws-org',
+  'settings':      'nav-settings',
+};
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  const navId = NAV_MAP[name];
+  if (navId) document.getElementById(navId).classList.add('active');
+}
+
+// 초기 상태
+switchTab('dashboard');
+</script>
+</body>
+</html>
