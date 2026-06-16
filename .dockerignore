@@ -1,0 +1,10 @@
+.git
+.env
+*.bak*
+__pycache__
+*.pyc
+*.pyo
+*.log
+mockup.html
+.DS_Store
+.claude

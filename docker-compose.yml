@@ -1,0 +1,25 @@
+services:
+  msp-manager:
+    image: msp-manager:latest
+    build: .
+    container_name: msp-manager
+    restart: unless-stopped
+    ports:
+      - "9070:9070"
+    env_file:
+      - .env
+    environment:
+      MSP_CACHE_DIR: /app/cache
+    volumes:
+      # 관리자 비밀번호 등 런타임 데이터
+      - ./data:/app/data
+      # GCP 스캔 캐시 + 일별 히스토리 (재시작 후에도 유지)
+      - msp-cache:/app/cache
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  msp-cache:

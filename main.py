@@ -1,6 +1,7 @@
 from __future__ import annotations
 import asyncio
 import json
+import os
 import queue
 import threading
 import time
@@ -31,11 +32,12 @@ from auth import is_admin, require_admin, verify_admin_password, change_admin_pa
 import config as _config
 
 # ── 캐시 파일 ─────────────────────────────────────────────────────────
-CACHE_FILE               = Path.home() / ".msp_gcp_audit_cache.json"
-RESOURCE_CACHE_FILE      = Path.home() / ".msp_gcp_resource_cache.json"
-BILLING_COST_FILE        = Path.home() / ".msp_gcp_billing_costs.json"
-CMDB_DETAIL_CACHE_FILE   = Path.home() / ".msp_gcp_cmdb_detail_cache.json"
-HISTORY_DIR              = Path.home() / ".msp_history"
+_CACHE_DIR               = Path(os.environ.get("MSP_CACHE_DIR", str(Path.home())))
+CACHE_FILE               = _CACHE_DIR / ".msp_gcp_audit_cache.json"
+RESOURCE_CACHE_FILE      = _CACHE_DIR / ".msp_gcp_resource_cache.json"
+BILLING_COST_FILE        = _CACHE_DIR / ".msp_gcp_billing_costs.json"
+CMDB_DETAIL_CACHE_FILE   = _CACHE_DIR / ".msp_gcp_cmdb_detail_cache.json"
+HISTORY_DIR              = _CACHE_DIR / ".msp_history"
 HISTORY_KEEP_DAYS        = 90
 
 def _save_history(kind: str, payload: dict) -> None:
