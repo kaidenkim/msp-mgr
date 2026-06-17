@@ -81,6 +81,8 @@ _GCLOUD_CANDIDATES = [
     str(Path.home() / "google-cloud-sdk/bin/gcloud"),
     "/home/ec2-user/google-cloud-sdk/bin/gcloud",
     "/root/google-cloud-sdk/bin/gcloud",
+    "/usr/lib64/google-cloud-sdk/bin/gcloud",
+    "/usr/lib/google-cloud-sdk/bin/gcloud",
 ]
 
 _gcloud_bin: str | None = None

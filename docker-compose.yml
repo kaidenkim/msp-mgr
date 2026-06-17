@@ -10,11 +10,15 @@ services:
       - .env
     environment:
       MSP_CACHE_DIR: /app/cache
+      CLOUDSDK_CONFIG: /root/.config/gcloud
     volumes:
       # 관리자 비밀번호 등 런타임 데이터
       - ./data:/app/data
       # GCP 스캔 캐시 + 일별 히스토리 (재시작 후에도 유지)
       - msp-cache:/app/cache
+      # EC2 호스트의 gcloud 인증 정보 공유
+      - /root/.config/gcloud:/root/.config/gcloud
+      - /usr/lib64/google-cloud-sdk:/usr/lib64/google-cloud-sdk:ro
     logging:
       driver: json-file
       options:
