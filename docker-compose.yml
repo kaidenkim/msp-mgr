@@ -13,7 +13,7 @@ services:
       CLOUDSDK_CONFIG: /root/.config/gcloud
     volumes:
       # 관리자 비밀번호 등 런타임 데이터
-      - ./data:/app/data
+      - msp-db-data:/app/data
       # GCP 스캔 캐시 + 일별 히스토리 (재시작 후에도 유지)
       - msp-cache:/app/cache
       # EC2 호스트의 gcloud 인증 정보 공유
@@ -27,3 +27,9 @@ services:
 
 volumes:
   msp-cache:
+  msp-db-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/ec2-user/msp-manager/data
