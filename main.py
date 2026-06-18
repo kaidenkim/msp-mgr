@@ -40,15 +40,20 @@ CMDB_DETAIL_CACHE_FILE   = _CACHE_DIR / ".msp_gcp_cmdb_detail_cache.json"
 HISTORY_DIR              = _CACHE_DIR / ".msp_history"
 HISTORY_KEEP_DAYS        = 90
 
+def _kst_today() -> date:
+    """KST(UTC+9) 기준 오늘 날짜 반환."""
+    from datetime import timezone, timedelta
+    return datetime.now(tz=timezone(timedelta(hours=9))).date()
+
 def _save_history(kind: str, payload: dict) -> None:
     """날짜별 히스토리 파일 저장 (kind: gcp_projects | gcp_resources | aws_cmdb)."""
     try:
         HISTORY_DIR.mkdir(exist_ok=True)
-        today = date.today().isoformat()
+        today = _kst_today().isoformat()
         path = HISTORY_DIR / f"{kind}_{today}.json"
         path.write_text(json.dumps(payload, ensure_ascii=False))
         # 오래된 파일 정리
-        cutoff = date.today().toordinal() - HISTORY_KEEP_DAYS
+        cutoff = _kst_today().toordinal() - HISTORY_KEEP_DAYS
         for f in HISTORY_DIR.glob(f"{kind}_*.json"):
             try:
                 d = date.fromisoformat(f.stem.replace(f"{kind}_", ""))
