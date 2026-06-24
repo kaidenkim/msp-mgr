@@ -473,6 +473,9 @@ tr:hover td { background: #fafbfd; }
           <option value="1">방치 의심 이상</option>
           <option value="2">방치 가능성 높음</option>
         </select>
+        <select class="filter-select" id="gcp-filter-billing-name" onchange="renderGcpProjects()">
+          <option value="">빌링 계정 전체</option>
+        </select>
         <input class="filter-input" id="gcp-filter-search" placeholder="🔍 프로젝트 ID 검색..." oninput="renderGcpProjects()">
       </div>
       <div class="table-card">
@@ -1064,6 +1067,7 @@ async function loadGcpProjectsByDate(targetDate) {
     const lastScan = data.last_scan || targetDate;
     document.getElementById('gcp-scan-status').innerHTML = `히스토리: <strong>${targetDate}</strong> · ${GCP_PROJECTS.length}개 프로젝트`;
     document.getElementById('gcp-proj-subtitle').textContent = `${GCP_PROJECTS.length}개`;
+    fillBillingNameFilter(GCP_PROJECTS);
     updateGcpCards(GCP_PROJECTS);
     renderGcpProjects();
   } catch(e) {
@@ -1111,6 +1115,20 @@ async function loadAwsCmdbByDate(targetDate) {
   }
 }
 
+function fillBillingNameFilter(projects) {
+  const sel = document.getElementById('gcp-filter-billing-name');
+  if (!sel) return;
+  const prev = sel.value;
+  while (sel.options.length > 1) sel.remove(1);
+  const names = [...new Set(projects.map(p => p.billing_account_name).filter(Boolean))].sort();
+  names.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n; opt.textContent = n;
+    sel.appendChild(opt);
+  });
+  if (prev && names.includes(prev)) sel.value = prev;
+}
+
 async function loadGcpProjects() {
   try {
     const data = await fetch('/api/gcp/status').then(r => r.json());
@@ -1118,6 +1136,7 @@ async function loadGcpProjects() {
     const lastScan = data.last_scan || '-';
     document.getElementById('gcp-scan-status').innerHTML = `마지막 스캔: <strong>${lastScan}</strong> · ${GCP_PROJECTS.length}개 프로젝트`;
     document.getElementById('gcp-proj-subtitle').textContent = `${GCP_PROJECTS.length}개`;
+    fillBillingNameFilter(GCP_PROJECTS);
     updateGcpCards(GCP_PROJECTS);
     renderGcpProjects();
   } catch(e) {
@@ -1161,11 +1180,12 @@ function abandonedBadge(p) {
 }
 
 function renderGcpProjects() {
-  const fBilling   = document.getElementById('gcp-filter-billing').value;
-  const fDeletable = document.getElementById('gcp-filter-deletable').value;
-  const fOwner     = document.getElementById('gcp-filter-owner').value;
-  const fAbandoned = document.getElementById('gcp-filter-abandoned')?.value || '';
-  const fSearch    = document.getElementById('gcp-filter-search').value.toLowerCase();
+  const fBilling     = document.getElementById('gcp-filter-billing').value;
+  const fBillingName = document.getElementById('gcp-filter-billing-name').value;
+  const fDeletable   = document.getElementById('gcp-filter-deletable').value;
+  const fOwner       = document.getElementById('gcp-filter-owner').value;
+  const fAbandoned   = document.getElementById('gcp-filter-abandoned')?.value || '';
+  const fSearch      = document.getElementById('gcp-filter-search').value.toLowerCase();
 
   let filtered = GCP_PROJECTS;
 
@@ -1181,6 +1201,7 @@ function renderGcpProjects() {
     if (fBilling === 'open'   && p.billing_open !== 'True') return false;
     if (fBilling === 'closed' && !(p.billing_open === 'False' || (p.billing_enabled !== 'True' && p.billing_account_id))) return false;
     if (fBilling === 'none'   && (p.billing_enabled === 'True' || p.billing_account_id)) return false;
+    if (fBillingName && (p.billing_account_name || '') !== fBillingName) return false;
     if (fDeletable && p.deletable !== fDeletable) return false;
     if (USER_ROLE === 'admin') {
       if (fOwner === 'yes' && !(p.owners && p.owners.length > 0)) return false;
@@ -1190,6 +1211,7 @@ function renderGcpProjects() {
     if (fAbandoned === '2' && abandonedLevel(p) < 2) return false;
     if (fSearch && !p.project_id.toLowerCase().includes(fSearch) &&
         !p.name.toLowerCase().includes(fSearch) &&
+        !(p.billing_account_name||'').toLowerCase().includes(fSearch) &&
         !(USER_ROLE === 'admin' && (p.owners||[]).some(o => o.toLowerCase().includes(fSearch)))) return false;
     return true;
   });
@@ -1232,7 +1254,7 @@ function renderGcpProjects() {
       <td>${p.name || '-'}</td>
       <td style="color:var(--t2);font-size:11px">${p.create_time || '-'}</td>
       <td>${billingDot(p)}${billingStatus(p)}</td>
-      <td style="font-family:monospace;font-size:10px;color:var(--t3)">${p.billing_account_id || '-'}</td>
+      <td style="font-size:11px">${p.billing_account_name ? `<div style="font-weight:500">${p.billing_account_name}</div><div style="font-family:monospace;font-size:10px;color:var(--t3)">${p.billing_account_id}</div>` : '<span style="color:var(--t3)">-</span>'}</td>
       ${isAdmin?`<td style="font-size:11px">${owners || '<span style="color:var(--t3)">-</span>'}</td>`:''}
       <td>${deletableTag(p.deletable)}</td>
       <td>${abandonedBadge(p)}</td>
