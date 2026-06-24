@@ -1244,7 +1244,7 @@ function renderGcpProjects() {
 
   tbody.innerHTML = filtered.slice(0, 200).map(p => {
     const owners = (p.owners || []).join('\n');
-    const canDelete = isAdmin && p.deletable !== '빌링연결';
+    const canDelete = isAdmin;
     const chkCell = isAdmin
       ? `<td style="text-align:center"><input type="checkbox" class="gcp-proj-check" value="${p.project_id}" ${canDelete?'':'disabled'} onchange="updateGcpDeleteToolbar()"></td>`
       : '<td></td>';
